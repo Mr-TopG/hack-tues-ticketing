@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<p>
+    <a href="{% url 'events_manage:list' %}">
+        ← Manage events
+    </a>
+</p>
+
+<section class="card organizer-event-form">
+    <h1>{{ page_title }}</h1>
+
+    {% if event.pk %}
+        <p>
+            <strong>Publication status:</strong>
+            {{ event.get_status_display }}
+        </p>
+
+        <p class="muted">
+            Public URL:
+            <code>{{ event.get_absolute_url }}</code>
+        </p>
+    {% else %}
+        <p class="muted">
+            The public URL is generated automatically.
+            New events are saved as drafts.
+        </p>
+    {% endif %}
+
+    <form method="post">
+        {% csrf_token %}
+
+        <fieldset>
+            <legend>Event details</legend>
+
+            {{ form.non_field_errors }}
+
+            <div class="field-group">
+                {{ form.name.label_tag }}
+                {{ form.name.errors }}
+                {{ form.name }}
+            </div>
+
+            <div class="field-group">
+                {{ form.venue.label_tag }}
+                {{ form.venue.errors }}
+                {{ form.venue }}
+            </div>
+
+            <div class="field-group">
+                {{ form.description.label_tag }}
+                {{ form.description.errors }}
+                {{ form.description }}
+            </div>
+        </fieldset>
+
+        <fieldset data-picker-scope>
+            <legend>Event schedule</legend>
+
+            <div class="datetime-grid">
+                <div class="datetime-card">
+                    {{ form.starts_at.label_tag }}
+                    {{ form.starts_at.errors }}
+                    {{ form.starts_at }}
+                </div>
+
+                <div class="datetime-card">
+                    {{ form.ends_at.label_tag }}
+                    {{ form.ends_at.errors }}
+                    {{ form.ends_at }}
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset data-picker-scope>
+            <legend>Ticket registration period</legend>
+
+            <p class="muted">
+                This is the standard registration period used
+                by every category.
+            </p>
+
+            <div class="datetime-grid">
+                <div class="datetime-card">
+                    {{ form.registration_opens_at.label_tag }}
+                    {{ form.registration_opens_at.errors }}
+                    {{ form.registration_opens_at }}
+
+                    <small>
+                        {{ form.registration_opens_at.help_text }}
+                    </small>
+                </div>
+
+                <div class="datetime-card">
+                    {{ form.registration_closes_at.label_tag }}
+                    {{ form.registration_closes_at.errors }}
+                    {{ form.registration_closes_at }}
+
+                    <small>
+                        {{ form.registration_closes_at.help_text }}
+                    </small>
+                </div>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Ticket categories</legend>
+
+            {{ formset.management_form }}
+            {{ formset.non_form_errors }}
+
+            <div class="category-form-list">
+                {% for category_form in formset %}
+                    <article
+                        class="category-form"
+                        data-picker-scope
+                    >
+                        {% for hidden in category_form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+
+                        {{ category_form.non_field_errors }}
+
+                        <div class="field-grid">
+                            <div class="field-group">
+                                {{ category_form.name.label_tag }}
+                                {{ category_form.name.errors }}
+                                {{ category_form.name }}
+                            </div>
+
+                            <div class="field-group">
+                                {{ category_form.capacity.label_tag }}
+                                {{ category_form.capacity.errors }}
+                                {{ category_form.capacity }}
+                            </div>
+
+                            <div class="field-group">
+                                {{ category_form.per_user_limit.label_tag }}
+                                {{ category_form.per_user_limit.errors }}
+                                {{ category_form.per_user_limit }}
+                            </div>
+
+                            <div class="field-group">
+                                {{ category_form.sort_order.label_tag }}
+                                {{ category_form.sort_order.errors }}
+                                {{ category_form.sort_order }}
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            {{ category_form.description.label_tag }}
+                            {{ category_form.description.errors }}
+                            {{ category_form.description }}
+                        </div>
+
+                        <div class="checkbox-row">
+                            {{ category_form.is_active }}
+                            {{ category_form.is_active.label_tag }}
+                        </div>
+
+                        <details class="advanced-settings">
+                            <summary>
+                                Advanced registration override
+                            </summary>
+
+                            <p class="muted">
+                                Leave these empty unless this
+                                category needs different dates.
+                            </p>
+
+                            <div class="datetime-grid">
+                                <div class="datetime-card">
+                                    {{ category_form.registration_opens_at.label_tag }}
+                                    {{ category_form.registration_opens_at.errors }}
+                                    {{ category_form.registration_opens_at }}
+
+                                    <small>
+                                        {{ category_form.registration_opens_at.help_text }}
+                                    </small>
+                                </div>
+
+                                <div class="datetime-card">
+                                    {{ category_form.registration_closes_at.label_tag }}
+                                    {{ category_form.registration_closes_at.errors }}
+                                    {{ category_form.registration_closes_at }}
+
+                                    <small>
+                                        {{ category_form.registration_closes_at.help_text }}
+                                    </small>
+                                </div>
+                            </div>
+                        </details>
+
+                        {% if category_form.instance.pk %}
+                            <div class="delete-row">
+                                {{ category_form.DELETE }}
+                                {{ category_form.DELETE.label_tag }}
+                            </div>
+                        {% endif %}
+                    </article>
+                {% endfor %}
+            </div>
+        </fieldset>
+
+        <div class="management-actions">
+            <button type="submit">
+                Save event
+            </button>
+
+            <a
+                class="button button-secondary"
+                href="{% url 'events_manage:list' %}"
+            >
+                Cancel editing
+            </a>
+        </div>
+    </form>
+
+    {% if event.pk %}
+        <div class="event-danger-zone">
+            <h2>Event actions</h2>
+
+            {% if event.status == "draft" %}
+                <p>
+                    This draft can be permanently deleted.
+                </p>
+
+                <a
+                    class="button button-danger"
+                    href="{% url 'events_manage:delete' event.pk %}"
+                >
+                    Delete draft
+                </a>
+            {% elif event.status == "published" %}
+                <p>
+                    Cancelling keeps the public page available
+                    but prevents ticket registration.
+                </p>
+
+                <a
+                    class="button button-warning"
+                    href="{% url 'events_manage:cancel' event.pk %}"
+                >
+                    Cancel event
+                </a>
+            {% elif event.status == "cancelled" %}
+                <p class="muted">
+                    This event is already cancelled.
+                </p>
+            {% else %}
+                <p class="muted">
+                    No destructive organizer actions are available
+                    for this event.
+                </p>
+            {% endif %}
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

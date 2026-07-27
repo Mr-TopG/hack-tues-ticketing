@@ -1,3 +1,4 @@
+{% load static %}
 <!doctype html>
 <html lang="en">
 <head>
@@ -11,6 +12,12 @@
     <title>
         {% block title %}Hack TUES Tickets{% endblock %}
     </title>
+
+
+    <link
+        rel="stylesheet"
+        href="{% static 'vendor/flatpickr/flatpickr.min.css' %}"
+    >
 
     <style>
         :root {
@@ -78,7 +85,9 @@
             font-weight: 600;
         }
 
-        input {
+        input,
+        textarea,
+        select {
             box-sizing: border-box;
             width: 100%;
             margin-bottom: 16px;
@@ -87,6 +96,25 @@
             border-radius: 8px;
             background: #111827;
             color: #f9fafb;
+            font: inherit;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            border-color: #3b82f6;
+            outline: 3px solid rgb(59 130 246 / 20%);
+        }
+
+        textarea::placeholder,
+        input::placeholder {
+            color: #6b7280;
         }
 
         button,
@@ -277,6 +305,562 @@
             background: #374151;
         }
 
+    
+        .page-heading {
+            margin-bottom: 28px;
+        }
+
+        .events-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+            gap: 24px;
+        }
+
+        .event-card,
+        .event-detail {
+            max-width: none;
+        }
+
+        .event-detail {
+            margin-bottom: 28px;
+        }
+
+        .event-card-heading,
+        .ticket-category-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .event-card-heading h1,
+        .event-card-heading h2,
+        .ticket-category-heading h3 {
+            margin-top: 0;
+        }
+
+        .event-card-heading a {
+            color: inherit;
+        }
+
+        .event-meta {
+            display: grid;
+            gap: 12px;
+            margin: 20px 0;
+        }
+
+        .event-meta div {
+            display: grid;
+            gap: 3px;
+        }
+
+        .event-meta dt {
+            color: #9ca3af;
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .event-meta dd {
+            margin: 0;
+        }
+
+        .event-description {
+            margin-top: 24px;
+        }
+
+        .status-badge {
+            flex-shrink: 0;
+            padding: 5px 9px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .status-open {
+            background: #14532d;
+            color: #dcfce7;
+        }
+
+        .status-upcoming {
+            background: #1e3a8a;
+            color: #dbeafe;
+        }
+
+        .status-closed,
+        .status-completed,
+        .status-inactive {
+            background: #374151;
+            color: #e5e7eb;
+        }
+
+        .status-cancelled {
+            background: #7f1d1d;
+            color: #fee2e2;
+        }
+
+        .ticket-section {
+            margin: 36px 0;
+        }
+
+        .ticket-category-list {
+            display: grid;
+            gap: 14px;
+        }
+
+        .ticket-category {
+            padding: 20px;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            background: #1f2937;
+        }
+
+        .ticket-facts {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 14px;
+        }
+
+        .back-link {
+            color: #93c5fd;
+        }
+
+        @media (max-width: 640px) {
+            .event-card-heading,
+            .ticket-category-heading {
+                flex-direction: column;
+            }
+        }
+
+    
+        .organizer-request-card,
+        .organizer-event-form {
+            max-width: 760px;
+        }
+
+        .organizer-status {
+            margin-bottom: 20px;
+            padding: 14px 16px;
+            border: 1px solid;
+            border-radius: 10px;
+        }
+
+        .status-pending {
+            border-color: #92400e;
+            background: #451a03;
+        }
+
+        .status-rejected {
+            border-color: #991b1b;
+            background: #450a0a;
+        }
+
+        .management-heading {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+
+        .management-event-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .management-event {
+            max-width: none;
+        }
+
+        .management-statuses,
+        .management-actions {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .status-draft {
+            background: #374151;
+            color: #e5e7eb;
+        }
+
+        .status-published {
+            background: #14532d;
+            color: #dcfce7;
+        }
+
+        fieldset {
+            margin: 24px 0;
+            padding: 20px;
+            border: 1px solid #374151;
+            border-radius: 12px;
+        }
+
+        legend {
+            padding: 0 8px;
+            font-weight: 700;
+        }
+
+        .category-form-list {
+            display: grid;
+            gap: 18px;
+        }
+
+        .category-form {
+            padding: 18px;
+            border: 1px solid #374151;
+            border-radius: 10px;
+            background: #111827;
+        }
+
+        input[type="checkbox"] {
+            width: auto;
+            margin-right: 8px;
+        }
+
+        @media (max-width: 640px) {
+            .management-heading {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .management-heading .button {
+                text-align: center;
+            }
+        }
+
+    
+        .field-group {
+            display: grid;
+            gap: 7px;
+            margin-bottom: 18px;
+        }
+
+        .field-group small,
+        .datetime-card small {
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+
+        .field-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .datetime-grid {
+            display: grid;
+            grid-template-columns:
+                repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+        }
+
+        .datetime-card {
+            display: grid;
+            gap: 8px;
+            padding: 16px;
+            border: 1px solid #374151;
+            border-radius: 10px;
+            background: #111827;
+        }
+
+        .datetime-card > label {
+            font-weight: 700;
+        }
+
+        .split-datetime {
+            display: grid;
+            grid-template-columns: minmax(150px, 1fr) 130px;
+            gap: 10px;
+        }
+
+        .split-datetime input {
+            width: 100%;
+            margin: 0;
+        }
+
+        .advanced-settings {
+            margin-top: 18px;
+            padding: 14px;
+            border: 1px solid #4b5563;
+            border-radius: 10px;
+        }
+
+        .advanced-settings summary {
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .advanced-settings[open] summary {
+            margin-bottom: 16px;
+        }
+
+        .checkbox-row,
+        .delete-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+        }
+
+        .checkbox-row label,
+        .delete-row label {
+            margin: 0;
+        }
+
+        @media (max-width: 520px) {
+            .split-datetime {
+                grid-template-columns: 1fr;
+            }
+        }
+
+    
+        .js-datetime-picker,
+        .js-datetime-picker.flatpickr-input,
+        .flatpickr-input[readonly] {
+            padding-right: 44px;
+            background-color: #111827;
+            background-image:
+                url("data:image/svg+xml,%3Csvg "
+                "xmlns='http://www.w3.org/2000/svg' "
+                "width='20' height='20' viewBox='0 0 24 24' "
+                "fill='none' stroke='%2393c5fd' "
+                "stroke-width='2' stroke-linecap='round' "
+                "stroke-linejoin='round'%3E"
+                "%3Crect x='3' y='4' width='18' height='18' "
+                "rx='2' ry='2'/%3E"
+                "%3Cline x1='16' y1='2' x2='16' y2='6'/%3E"
+                "%3Cline x1='8' y1='2' x2='8' y2='6'/%3E"
+                "%3Cline x1='3' y1='10' x2='21' y2='10'/%3E"
+                "%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 13px center;
+            cursor: pointer;
+        }
+
+        .js-datetime-picker:focus,
+        .flatpickr-input:focus {
+            border-color: #3b82f6;
+            outline: 3px solid rgb(59 130 246 / 20%);
+        }
+
+        .flatpickr-calendar {
+            width: 326px;
+            border: 1px solid #4b5563;
+            border-radius: 14px;
+            background: #1f2937;
+            box-shadow:
+                0 24px 70px rgb(0 0 0 / 45%);
+            color: #f9fafb;
+            overflow: hidden;
+        }
+
+        .flatpickr-calendar.arrowTop::before,
+        .flatpickr-calendar.arrowTop::after {
+            border-bottom-color: #1f2937;
+        }
+
+        .flatpickr-calendar.arrowBottom::before,
+        .flatpickr-calendar.arrowBottom::after {
+            border-top-color: #1f2937;
+        }
+
+        .flatpickr-months {
+            padding: 8px 6px 2px;
+            background: #111827;
+        }
+
+        .flatpickr-months .flatpickr-month {
+            height: 42px;
+            background: transparent;
+            color: #f9fafb;
+        }
+
+        .flatpickr-current-month {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding-top: 7px;
+            color: #f9fafb;
+        }
+
+        .flatpickr-current-month .flatpickr-monthDropdown-months,
+        .flatpickr-current-month input.cur-year {
+            border: 1px solid transparent;
+            border-radius: 7px;
+            background: #1f2937;
+            color: #f9fafb;
+            font-weight: 700;
+        }
+
+        .flatpickr-current-month
+        .flatpickr-monthDropdown-months:hover,
+        .flatpickr-current-month input.cur-year:hover {
+            border-color: #4b5563;
+            background: #374151;
+        }
+
+        .flatpickr-current-month
+        .flatpickr-monthDropdown-months option {
+            background: #1f2937;
+            color: #f9fafb;
+        }
+
+        .flatpickr-months .flatpickr-prev-month,
+        .flatpickr-months .flatpickr-next-month {
+            display: grid;
+            place-items: center;
+            width: 38px;
+            height: 38px;
+            margin: 4px;
+            padding: 0;
+            border-radius: 9px;
+            color: #93c5fd;
+            font-size: 28px;
+            line-height: 1;
+        }
+
+        .flatpickr-months .flatpickr-prev-month:hover,
+        .flatpickr-months .flatpickr-next-month:hover {
+            background: #374151;
+            color: #dbeafe;
+        }
+
+        .flatpickr-weekdays {
+            height: 36px;
+            background: #111827;
+        }
+
+        span.flatpickr-weekday {
+            background: transparent;
+            color: #9ca3af;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .flatpickr-days {
+            border: 0;
+            background: #1f2937;
+        }
+
+        .dayContainer {
+            padding: 8px;
+        }
+
+        .flatpickr-day {
+            border: 0;
+            border-radius: 9px;
+            color: #e5e7eb;
+        }
+
+        .flatpickr-day:hover,
+        .flatpickr-day:focus {
+            border: 0;
+            background: #374151;
+            color: #ffffff;
+        }
+
+        .flatpickr-day.today {
+            border: 1px solid #60a5fa;
+            color: #bfdbfe;
+        }
+
+        .flatpickr-day.today:hover {
+            background: #1e3a8a;
+            color: #ffffff;
+        }
+
+        .flatpickr-day.selected,
+        .flatpickr-day.startRange,
+        .flatpickr-day.endRange,
+        .flatpickr-day.selected:hover,
+        .flatpickr-day.startRange:hover,
+        .flatpickr-day.endRange:hover {
+            border-color: #2563eb;
+            background: #2563eb;
+            color: #ffffff;
+        }
+
+        .flatpickr-day.prevMonthDay,
+        .flatpickr-day.nextMonthDay,
+        .flatpickr-day.flatpickr-disabled {
+            color: #4b5563;
+        }
+
+        .flatpickr-time {
+            height: 54px;
+            border-top: 1px solid #374151;
+            background: #111827;
+        }
+
+        .flatpickr-time input,
+        .flatpickr-time .flatpickr-am-pm {
+            margin: 0;
+            border-radius: 0;
+            background: transparent;
+            color: #f9fafb;
+            font-weight: 700;
+        }
+
+        .flatpickr-time input:hover,
+        .flatpickr-time input:focus,
+        .flatpickr-time .flatpickr-am-pm:hover,
+        .flatpickr-time .flatpickr-am-pm:focus {
+            background: #374151;
+        }
+
+        .flatpickr-time .numInputWrapper span.arrowUp::after {
+            border-bottom-color: #93c5fd;
+        }
+
+        .flatpickr-time .numInputWrapper span.arrowDown::after {
+            border-top-color: #93c5fd;
+        }
+
+        .flatpickr-time-separator {
+            color: #9ca3af;
+            font-weight: 700;
+        }
+
+        .button-warning {
+            background: #b45309;
+        }
+
+        .button-warning:hover {
+            background: #92400e;
+        }
+
+        .event-action-card {
+            max-width: 620px;
+            border-color: #7f1d1d;
+        }
+
+        .event-action-summary {
+            margin: 24px 0;
+            padding: 16px;
+            border: 1px solid #374151;
+            border-radius: 10px;
+            background: #111827;
+        }
+
+        .event-danger-zone {
+            margin-top: 32px;
+            padding: 18px;
+            border: 1px solid #7f1d1d;
+            border-radius: 12px;
+            background: #260b0b;
+        }
+
+        .event-danger-zone h2 {
+            margin-top: 0;
+            color: #fca5a5;
+        }
+
     </style>
 </head>
 
@@ -288,12 +872,22 @@
         </a>
 
         <div class="nav-actions">
+            <a href="{% url 'events:list' %}">
+                Events
+            </a>
+
             {% if user.is_authenticated %}
                 <span>{{ user.email }}</span>
 
                 <a href="{% url 'accounts:manage' %}">
                     Account
                 </a>
+
+                {% if user.organizer_profile.status == "approved" %}
+                    <a href="{% url 'events_manage:list' %}">
+                        Manage events
+                    </a>
+                {% endif %}
 
                 <form
                     class="inline-form"
@@ -328,5 +922,14 @@
 
     {% block content %}{% endblock %}
 </main>
+
+<script
+    src="{% static 'vendor/flatpickr/flatpickr.min.js' %}"
+></script>
+
+<script
+    src="{% static 'js/datetime-picker.js' %}"
+></script>
+
 </body>
 </html>

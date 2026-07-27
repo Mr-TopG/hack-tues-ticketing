@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Manage events | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="management-heading">
+    <div>
+        <h1>Manage events</h1>
+
+        <p class="muted">
+            Create and manage your events and ticket categories.
+        </p>
+    </div>
+
+    <a
+        class="button"
+        href="{% url 'events_manage:create' %}"
+    >
+        Create event
+    </a>
+</section>
+
+<div class="management-event-list">
+    {% for event in events %}
+        <article class="card management-event">
+            <div class="event-card-heading">
+                <div>
+                    <h2>{{ event.name }}</h2>
+
+                    <p class="muted">
+                        {{ event.slug }}
+                    </p>
+                </div>
+
+                <div class="management-statuses">
+                    <span
+                        class="
+                            status-badge
+                            status-{{ event.status }}
+                        "
+                    >
+                        {{ event.get_status_display }}
+                    </span>
+
+                    <span
+                        class="
+                            status-badge
+                            status-{{ event.registration_state }}
+                        "
+                    >
+                        Registration:
+                        {{ event.registration_state|title }}
+                    </span>
+                </div>
+            </div>
+
+            <p>
+                <strong>Starts:</strong>
+                {{ event.starts_at|date:"j F Y, H:i" }}
+            </p>
+
+            <p>
+                <strong>Ticket categories:</strong>
+                {{ event.ticket_categories.count }}
+            </p>
+
+            <div class="management-actions">
+                <a
+                    class="button"
+                    href="{% url 'events_manage:edit' event.pk %}"
+                >
+                    Edit event
+                </a>
+
+                {% if event.status != "draft" %}
+                    <a
+                        class="button button-secondary"
+                        href="{{ event.get_absolute_url }}"
+                    >
+                        Public page
+                    </a>
+                {% endif %}
+
+                {% if event.status == "draft" %}
+                    <a
+                        class="button button-danger"
+                        href="{% url 'events_manage:delete' event.pk %}"
+                    >
+                        Delete draft
+                    </a>
+                {% elif event.status == "published" %}
+                    <a
+                        class="button button-warning"
+                        href="{% url 'events_manage:cancel' event.pk %}"
+                    >
+                        Cancel event
+                    </a>
+                {% endif %}
+            </div>
+        </article>
+    {% empty %}
+        <section class="card">
+            <h2>No events yet</h2>
+
+            <p class="muted">
+                Create your first event to begin configuring
+                ticket categories.
+            </p>
+        </section>
+    {% endfor %}
+</div>
+{% endblock %}

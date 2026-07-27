@@ -13,6 +13,11 @@ urlpatterns = [
         name="manage",
     ),
     path(
+        "organizer/request/",
+        views.request_organizer_access,
+        name="organizer_request",
+    ),
+    path(
         "delete/",
         views.delete_account,
         name="delete",

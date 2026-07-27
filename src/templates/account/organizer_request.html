@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+
+{% block title %}Organizer access | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card organizer-request-card">
+    <h1>Organizer access</h1>
+
+    {% if organizer_profile.status == "pending" %}
+        <div class="organizer-status status-pending">
+            <strong>Request pending</strong>
+
+            <p>
+                An administrator must review your organizer request.
+            </p>
+        </div>
+    {% elif organizer_profile.status == "rejected" %}
+        <div class="organizer-status status-rejected">
+            <strong>Request rejected</strong>
+
+            <p>
+                You may update the information and submit a new
+                request.
+            </p>
+        </div>
+    {% endif %}
+
+    <p class="muted">
+        Approved organizers can create events and ticket categories.
+        Events remain drafts until an administrator publishes them.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {{ form.as_p }}
+
+        <button type="submit">
+            {% if organizer_profile %}
+                Submit request again
+            {% else %}
+                Request organizer access
+            {% endif %}
+        </button>
+    </form>
+
+    <p>
+        <a href="{% url 'accounts:manage' %}">
+            Back to account management
+        </a>
+    </p>
+</section>
+{% endblock %}

@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import User
+from .models import OrganizerProfile, User
 
 
 class AdditionalSignupForm(forms.Form):
@@ -92,3 +92,44 @@ class DeleteAccountForm(forms.Form):
             )
 
         return confirmation_email
+
+
+class OrganizerRequestForm(forms.ModelForm):
+    class Meta:
+        model = OrganizerProfile
+        fields = (
+            "organization_name",
+            "reason",
+        )
+        widgets = {
+            "organization_name": forms.TextInput(
+                attrs={
+                    "autocomplete": "organization",
+                }
+            ),
+            "reason": forms.Textarea(
+                attrs={
+                    "rows": 6,
+                    "placeholder": (
+                        "Describe the event or organization "
+                        "you want to manage."
+                    ),
+                }
+            ),
+        }
+
+    def clean_organization_name(self):
+        return self.cleaned_data[
+            "organization_name"
+        ].strip()
+
+    def clean_reason(self):
+        reason = self.cleaned_data["reason"].strip()
+
+        if len(reason) < 20:
+            raise forms.ValidationError(
+                "Please provide at least 20 characters."
+            )
+
+        return reason
+

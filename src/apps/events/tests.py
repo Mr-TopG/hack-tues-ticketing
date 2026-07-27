@@ -3,6 +3,7 @@ from datetime import timedelta
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
 from django.test import TestCase
+from django.urls import reverse
 from django.utils import timezone
 
 from .models import Event, TicketCategory
@@ -141,3 +142,102 @@ class TicketCategoryModelTests(TestCase):
                     slug="participant",
                     capacity=100,
                 )
+
+
+
+class PublicEventViewTests(TestCase):
+    def setUp(self):
+        now = timezone.now()
+
+        self.published_event = Event.objects.create(
+            name="Public Hackathon",
+            slug="public-hackathon",
+            description="A published public event.",
+            venue="TUES",
+            starts_at=now + timedelta(days=5),
+            ends_at=now + timedelta(days=7),
+            registration_opens_at=now - timedelta(hours=1),
+            registration_closes_at=now + timedelta(days=2),
+            status=Event.Status.PUBLISHED,
+        )
+
+        self.draft_event = Event.objects.create(
+            name="Secret Draft Event",
+            slug="secret-draft-event",
+            starts_at=now + timedelta(days=10),
+            ends_at=now + timedelta(days=11),
+            registration_opens_at=now + timedelta(days=2),
+            registration_closes_at=now + timedelta(days=8),
+            status=Event.Status.DRAFT,
+        )
+
+        self.cancelled_event = Event.objects.create(
+            name="Cancelled Public Event",
+            slug="cancelled-public-event",
+            starts_at=now + timedelta(days=5),
+            ends_at=now + timedelta(days=6),
+            registration_opens_at=now - timedelta(days=2),
+            registration_closes_at=now + timedelta(days=2),
+            status=Event.Status.CANCELLED,
+        )
+
+        self.active_category = TicketCategory.objects.create(
+            event=self.published_event,
+            name="Participant",
+            slug="participant",
+            capacity=500,
+            per_user_limit=1,
+            is_active=True,
+        )
+
+        self.inactive_category = TicketCategory.objects.create(
+            event=self.published_event,
+            name="Hidden Staff",
+            slug="hidden-staff",
+            capacity=20,
+            per_user_limit=1,
+            is_active=False,
+        )
+
+    def test_event_list_only_shows_public_events(self):
+        response = self.client.get(reverse("events:list"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Public Hackathon")
+        self.assertContains(response, "Cancelled Public Event")
+        self.assertNotContains(response, "Secret Draft Event")
+
+    def test_event_detail_shows_active_ticket_categories(self):
+        response = self.client.get(
+            reverse(
+                "events:detail",
+                kwargs={"slug": self.published_event.slug},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Participant")
+        self.assertContains(response, "Capacity:")
+        self.assertContains(response, "500")
+        self.assertNotContains(response, "Hidden Staff")
+
+    def test_draft_event_detail_returns_not_found(self):
+        response = self.client.get(
+            reverse(
+                "events:detail",
+                kwargs={"slug": self.draft_event.slug},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_open_registration_state_is_displayed(self):
+        response = self.client.get(
+            reverse(
+                "events:detail",
+                kwargs={"slug": self.published_event.slug},
+            )
+        )
+
+        self.assertContains(response, "Open")
+        self.assertContains(response, "Registration is open")

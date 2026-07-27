@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }} | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card event-action-card">
+    <h1>{{ page_title }}</h1>
+
+    <div class="event-action-summary">
+        <h2>{{ event.name }}</h2>
+
+        <p>
+            <strong>Status:</strong>
+            {{ event.get_status_display }}
+        </p>
+
+        <p>
+            <strong>Starts:</strong>
+            {{ event.starts_at|date:"j F Y, H:i" }}
+        </p>
+    </div>
+
+    <p>
+        {{ action_description }}
+    </p>
+
+    <p>
+        <strong>This action requires confirmation.</strong>
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="management-actions">
+            <button
+                class="{{ action_class }}"
+                type="submit"
+            >
+                {{ action_name }}
+            </button>
+
+            <a
+                class="button button-secondary"
+                href="{% url 'events_manage:edit' event.pk %}"
+            >
+                Go back
+            </a>
+        </div>
+    </form>
+</section>
+{% endblock %}

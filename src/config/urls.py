@@ -7,6 +7,14 @@ from config.views import health
 
 urlpatterns = [
     path(
+        "manage/events/",
+        include("apps.events.organizer_urls"),
+    ),
+    path(
+        "events/",
+        include("apps.events.urls"),
+    ),
+    path(
         "",
         TemplateView.as_view(template_name="home.html"),
         name="home",

@@ -205,6 +205,65 @@
             Manage connected accounts
         </a>
     </section>
+
+    <section class="card">
+        <h2>Organizer access</h2>
+
+        {% if organizer_profile.status == "approved" %}
+            <p>
+                <strong>Organizer account approved</strong>
+            </p>
+
+            <p class="muted">
+                You can create and manage events.
+            </p>
+
+            <a
+                class="button"
+                href="{% url 'events_manage:list' %}"
+            >
+                Manage events
+            </a>
+        {% elif organizer_profile.status == "pending" %}
+            <p>
+                <strong>Organizer request pending</strong>
+            </p>
+
+            <p class="muted">
+                An administrator must review your request.
+            </p>
+
+            <a
+                class="button button-secondary"
+                href="{% url 'accounts:organizer_request' %}"
+            >
+                View request
+            </a>
+        {% elif organizer_profile.status == "rejected" %}
+            <p>
+                <strong>Organizer request rejected</strong>
+            </p>
+
+            <a
+                class="button"
+                href="{% url 'accounts:organizer_request' %}"
+            >
+                Submit a new request
+            </a>
+        {% else %}
+            <p class="muted">
+                Request approval to create and manage events.
+            </p>
+
+            <a
+                class="button"
+                href="{% url 'accounts:organizer_request' %}"
+            >
+                Request organizer access
+            </a>
+        {% endif %}
+    </section>
+
     <section class="card danger-card">
         <h2>Delete account</h2>
 

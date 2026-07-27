@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}{{ event.name }} | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<p>
+    <a
+        class="back-link"
+        href="{% url 'events:list' %}"
+    >
+        ← All events
+    </a>
+</p>
+
+<article class="card event-detail">
+    <div class="event-card-heading">
+        <h1>{{ event.name }}</h1>
+
+        <span
+            class="
+                status-badge
+                status-{{ event.registration_state }}
+            "
+        >
+            {{ event.registration_state|title }}
+        </span>
+    </div>
+
+    {% if event.venue %}
+        <p>
+            <strong>Venue:</strong>
+            {{ event.venue }}
+        </p>
+    {% endif %}
+
+    <dl class="event-meta">
+        <div>
+            <dt>Event starts</dt>
+            <dd>{{ event.starts_at|date:"j F Y, H:i" }}</dd>
+        </div>
+
+        <div>
+            <dt>Event ends</dt>
+            <dd>{{ event.ends_at|date:"j F Y, H:i" }}</dd>
+        </div>
+
+        <div>
+            <dt>Registration opens</dt>
+            <dd>
+                {{ event.registration_opens_at|date:"j F Y, H:i" }}
+            </dd>
+        </div>
+
+        <div>
+            <dt>Registration closes</dt>
+            <dd>
+                {{ event.registration_closes_at|date:"j F Y, H:i" }}
+            </dd>
+        </div>
+    </dl>
+
+    {% if event.description %}
+        <div class="event-description">
+            {{ event.description|linebreaks }}
+        </div>
+    {% endif %}
+</article>
+
+<section class="ticket-section">
+    <h2>Ticket categories</h2>
+
+    <div class="ticket-category-list">
+        {% for category in event.public_ticket_categories %}
+            <article class="ticket-category">
+                <div>
+                    <div class="ticket-category-heading">
+                        <h3>{{ category.name }}</h3>
+
+                        <span
+                            class="
+                                status-badge
+                                status-{{ category.registration_state }}
+                            "
+                        >
+                            {{ category.registration_state|title }}
+                        </span>
+                    </div>
+
+                    {% if category.description %}
+                        <p class="muted">
+                            {{ category.description }}
+                        </p>
+                    {% endif %}
+
+                    <div class="ticket-facts">
+                        <span>
+                            <strong>Capacity:</strong>
+                            {{ category.capacity }}
+                        </span>
+
+                        <span>
+                            <strong>Per-user limit:</strong>
+                            {{ category.per_user_limit }}
+                        </span>
+                    </div>
+                </div>
+            </article>
+        {% empty %}
+            <article class="ticket-category">
+                <p class="muted">
+                    No public ticket categories are configured.
+                </p>
+            </article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="card event-detail">
+    <h2>Ticket registration</h2>
+
+    {% if event.registration_state == "open" %}
+        <p>
+            Registration is open. Ticket allocation will be enabled
+            in the next implementation milestone.
+        </p>
+    {% elif event.registration_state == "upcoming" %}
+        <p>
+            Registration has not opened yet.
+        </p>
+    {% elif event.registration_state == "cancelled" %}
+        <p>
+            This event has been cancelled.
+        </p>
+    {% elif event.registration_state == "completed" %}
+        <p>
+            This event has ended.
+        </p>
+    {% else %}
+        <p>
+            Registration is closed.
+        </p>
+    {% endif %}
+</section>
+{% endblock %}

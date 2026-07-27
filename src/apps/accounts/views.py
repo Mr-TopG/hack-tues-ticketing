@@ -7,7 +7,12 @@ from django.db import transaction
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
-from .forms import DeleteAccountForm, ProfileForm
+from .forms import (
+    DeleteAccountForm,
+    OrganizerRequestForm,
+    ProfileForm,
+)
+from .models import OrganizerProfile
 from .verification import is_user_email_verified
 
 
@@ -43,6 +48,10 @@ def manage_account(request):
         "provider"
     )
 
+    organizer_profile = OrganizerProfile.objects.filter(
+        user=request.user,
+    ).first()
+
     context = {
         "form": form,
         "email_verified": is_user_email_verified(
@@ -53,12 +62,67 @@ def manage_account(request):
             request.user.has_usable_password()
         ),
         "social_accounts": social_accounts,
+        "organizer_profile": organizer_profile,
     }
 
     return render(
         request,
         "account/manage.html",
         context,
+    )
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def request_organizer_access(request):
+    profile = OrganizerProfile.objects.filter(
+        user=request.user,
+    ).first()
+
+    if (
+        profile
+        and profile.status
+        == OrganizerProfile.Status.APPROVED
+    ):
+        messages.info(
+            request,
+            "Your organizer account is already approved.",
+        )
+
+        return redirect("events_manage:list")
+
+    if request.method == "POST":
+        form = OrganizerRequestForm(
+            request.POST,
+            instance=profile,
+        )
+
+        if form.is_valid():
+            organizer_profile = form.save(commit=False)
+            organizer_profile.user = request.user
+            organizer_profile.status = (
+                OrganizerProfile.Status.PENDING
+            )
+            organizer_profile.reviewed_at = None
+            organizer_profile.reviewed_by = None
+            organizer_profile.save()
+
+            messages.success(
+                request,
+                "Your organizer request has been submitted.",
+            )
+
+            return redirect("accounts:organizer_request")
+    else:
+        form = OrganizerRequestForm(instance=profile)
+
+    return render(
+        request,
+        "account/organizer_request.html",
+        {
+            "form": form,
+            "organizer_profile": profile,
+        },
     )
 
 

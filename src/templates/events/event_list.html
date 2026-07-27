@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+
+{% block title %}Events | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="page-heading">
+    <h1>Events</h1>
+
+    <p class="muted">
+        Browse published events and their available ticket categories.
+    </p>
+</section>
+
+<div class="events-grid">
+    {% for event in events %}
+        <article class="card event-card">
+            <div class="event-card-heading">
+                <h2>
+                    <a href="{{ event.get_absolute_url }}">
+                        {{ event.name }}
+                    </a>
+                </h2>
+
+                <span
+                    class="
+                        status-badge
+                        status-{{ event.registration_state }}
+                    "
+                >
+                    {{ event.registration_state|title }}
+                </span>
+            </div>
+
+            {% if event.venue %}
+                <p>
+                    <strong>Venue:</strong>
+                    {{ event.venue }}
+                </p>
+            {% endif %}
+
+            <dl class="event-meta">
+                <div>
+                    <dt>Starts</dt>
+                    <dd>{{ event.starts_at|date:"j F Y, H:i" }}</dd>
+                </div>
+
+                <div>
+                    <dt>Ends</dt>
+                    <dd>{{ event.ends_at|date:"j F Y, H:i" }}</dd>
+                </div>
+
+                <div>
+                    <dt>Registration</dt>
+                    <dd>
+                        {{ event.registration_opens_at|date:"j F Y, H:i" }}
+                        –
+                        {{ event.registration_closes_at|date:"j F Y, H:i" }}
+                    </dd>
+                </div>
+            </dl>
+
+            {% if event.description %}
+                <p>
+                    {{ event.description|truncatewords:35 }}
+                </p>
+            {% endif %}
+
+            <a
+                class="button"
+                href="{{ event.get_absolute_url }}"
+            >
+                View event
+            </a>
+        </article>
+    {% empty %}
+        <section class="card event-card">
+            <h2>No published events</h2>
+
+            <p class="muted">
+                There are currently no public events.
+            </p>
+        </section>
+    {% endfor %}
+</div>
+{% endblock %}

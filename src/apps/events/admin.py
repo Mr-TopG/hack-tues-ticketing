@@ -26,6 +26,7 @@ class TicketCategoryInline(admin.TabularInline):
 class EventAdmin(admin.ModelAdmin):
     list_display = (
         "name",
+        "organizer",
         "status",
         "starts_at",
         "registration_opens_at",
@@ -41,6 +42,13 @@ class EventAdmin(admin.ModelAdmin):
         "name",
         "venue",
         "description",
+        "organizer__email",
+        "organizer__first_name",
+        "organizer__last_name",
+    )
+
+    autocomplete_fields = (
+        "organizer",
     )
 
     prepopulated_fields = {
@@ -76,6 +84,7 @@ class TicketCategoryAdmin(admin.ModelAdmin):
     search_fields = (
         "name",
         "event__name",
+        "event__organizer__email",
     )
 
     prepopulated_fields = {
