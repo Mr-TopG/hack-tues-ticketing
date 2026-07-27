@@ -117,11 +117,13 @@ class AllauthLoginTests(TestCase):
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
 )
-class EmailVerificationStatusTests(TestCase):
+class AccountManagementTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
             email="status@example.com",
             password="StrongTestPassword123!",
+            first_name="Old",
+            last_name="Name",
         )
 
         self.email_address = EmailAddress.objects.create(
@@ -134,13 +136,15 @@ class EmailVerificationStatusTests(TestCase):
         self.client.force_login(self.user)
 
     def test_unverified_status_and_resend_button_are_visible(self):
-        response = self.client.get(reverse("home"))
+        response = self.client.get(
+            reverse("accounts:manage")
+        )
 
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, "Email not verified")
+        self.assertContains(response, "Not verified")
         self.assertContains(
             response,
-            "Resend verification email",
+            "Resend verification",
         )
 
     def test_resend_button_sends_confirmation_email(self):
@@ -159,18 +163,101 @@ class EmailVerificationStatusTests(TestCase):
             [self.user.email],
         )
 
-    def test_verification_warning_is_hidden_after_verification(self):
+    def test_verified_status_is_visible_on_account_page(self):
         self.email_address.verified = True
-        self.email_address.save(update_fields=["verified"])
+        self.email_address.save(
+            update_fields=["verified"]
+        )
 
-        response = self.client.get(reverse("home"))
+        response = self.client.get(
+            reverse("accounts:manage")
+        )
 
         self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Verified")
         self.assertNotContains(
             response,
-            "Email not verified",
+            "Resend verification",
         )
-        self.assertNotContains(
+
+    def test_profile_information_can_be_updated(self):
+        response = self.client.post(
+            reverse("accounts:manage"),
+            {
+                "first_name": "Alex",
+                "last_name": "Updated",
+            },
+        )
+
+        self.assertRedirects(
             response,
-            "Resend verification email",
+            reverse("accounts:manage"),
+        )
+
+        self.user.refresh_from_db()
+
+        self.assertEqual(
+            self.user.first_name,
+            "Alex",
+        )
+        self.assertEqual(
+            self.user.last_name,
+            "Updated",
+        )
+
+
+    def test_secondary_email_can_be_deleted(self):
+        secondary = EmailAddress.objects.create(
+            user=self.user,
+            email="secondary@example.com",
+            primary=False,
+            verified=True,
+        )
+
+        response = self.client.post(
+            reverse("account_email"),
+            {
+                "email": secondary.email,
+                "action_remove": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.assertFalse(
+            EmailAddress.objects.filter(
+                pk=secondary.pk,
+            ).exists()
+        )
+
+    def test_primary_email_cannot_be_deleted(self):
+        response = self.client.post(
+            reverse("account_email"),
+            {
+                "email": self.email_address.email,
+                "action_remove": "1",
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+        self.assertTrue(
+            EmailAddress.objects.filter(
+                pk=self.email_address.pk,
+                primary=True,
+            ).exists()
+        )
+
+
+class AccountManagementAccessTests(TestCase):
+    def test_account_page_requires_authentication(self):
+        response = self.client.get(
+            reverse("accounts:manage")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response.url.startswith(
+                reverse("account_login")
+            )
         )

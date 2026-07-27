@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Account | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<div class="account-grid">
+    <section class="card">
+        <h1>Account management</h1>
+
+        <p class="muted">
+            Update the personal information used when issuing
+            your tickets.
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {{ form.as_p }}
+
+            <button type="submit">
+                Save profile
+            </button>
+        </form>
+    </section>
+
+    <section class="card">
+        <h2>Email addresses</h2>
+
+        <p class="muted">
+            Your primary email is used to log in and cannot be
+            deleted until another email is verified and made primary.
+        </p>
+
+        <div class="email-list">
+            {% for email_address in email_addresses %}
+                <div class="email-row">
+                    <div class="email-details">
+                        <strong>{{ email_address.email }}</strong>
+
+                        <div class="email-badges">
+                            {% if email_address.primary %}
+                                <span class="badge badge-primary">
+                                    Primary
+                                </span>
+                            {% endif %}
+
+                            {% if email_address.verified %}
+                                <span class="badge badge-verified">
+                                    Verified
+                                </span>
+                            {% else %}
+                                <span class="badge badge-unverified">
+                                    Not verified
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="email-actions">
+                        {% if not email_address.verified %}
+                            <form
+                                method="post"
+                                action="{% url 'account_email' %}"
+                            >
+                                {% csrf_token %}
+
+                                <input
+                                    type="hidden"
+                                    name="email"
+                                    value="{{ email_address.email }}"
+                                >
+
+                                <button
+                                    type="submit"
+                                    name="action_send"
+                                    value="1"
+                                >
+                                    Resend verification
+                                </button>
+                            </form>
+                        {% endif %}
+
+                        {% if not email_address.primary %}
+                            {% if email_address.verified %}
+                                <form
+                                    method="post"
+                                    action="{% url 'account_email' %}"
+                                >
+                                    {% csrf_token %}
+
+                                    <input
+                                        type="hidden"
+                                        name="email"
+                                        value="{{ email_address.email }}"
+                                    >
+
+                                    <button
+                                        type="submit"
+                                        name="action_primary"
+                                        value="1"
+                                    >
+                                        Make primary
+                                    </button>
+                                </form>
+                            {% endif %}
+
+                            <form
+                                method="post"
+                                action="{% url 'account_email' %}"
+                                onsubmit="
+                                    return confirm(
+                                        'Delete {{ email_address.email|escapejs }}?'
+                                    );
+                                "
+                            >
+                                {% csrf_token %}
+
+                                <input
+                                    type="hidden"
+                                    name="email"
+                                    value="{{ email_address.email }}"
+                                >
+
+                                <button
+                                    class="button-danger"
+                                    type="submit"
+                                    name="action_remove"
+                                    value="1"
+                                >
+                                    Delete email
+                                </button>
+                            </form>
+                        {% else %}
+                            <span class="muted">
+                                Primary login email
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+            {% empty %}
+                <p>No email addresses are associated with this account.</p>
+            {% endfor %}
+        </div>
+
+        <p>
+            <a
+                class="button"
+                href="{% url 'account_email' %}"
+            >
+                Add or manage email addresses
+            </a>
+        </p>
+    </section>
+
+    <section class="card">
+        <h2>Password</h2>
+
+        {% if has_usable_password %}
+            <p class="muted">
+                Change the password used for email login.
+            </p>
+
+            <a
+                class="button"
+                href="{% url 'account_change_password' %}"
+            >
+                Change password
+            </a>
+        {% else %}
+            <p class="muted">
+                This account currently uses social login and
+                does not have a password.
+            </p>
+
+            <a
+                class="button"
+                href="{% url 'account_set_password' %}"
+            >
+                Set password
+            </a>
+        {% endif %}
+    </section>
+
+    <section class="card">
+        <h2>Connected accounts</h2>
+
+        {% if social_accounts %}
+            <ul>
+                {% for social_account in social_accounts %}
+                    <li>
+                        {{ social_account.provider|title }}
+                    </li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <p class="muted">
+                No social accounts are connected yet.
+            </p>
+        {% endif %}
+
+        <a
+            class="button"
+            href="{% url 'socialaccount_connections' %}"
+        >
+            Manage connected accounts
+        </a>
+    </section>
+</div>
+{% endblock %}

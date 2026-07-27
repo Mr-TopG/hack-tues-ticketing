@@ -12,6 +12,10 @@ urlpatterns = [
         name="home",
     ),
     path(
+        "account/",
+        include("apps.accounts.urls"),
+    ),
+    path(
         "accounts/",
         include("allauth.urls"),
     ),

@@ -159,6 +159,98 @@
             }
         }
 
+    
+        .account-grid {
+            display: grid;
+            gap: 24px;
+        }
+
+        .email-list {
+            display: grid;
+            gap: 12px;
+            margin: 24px 0;
+        }
+
+        .email-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            padding: 16px;
+            border: 1px solid #374151;
+            border-radius: 10px;
+            background: #111827;
+        }
+
+        .email-details {
+            display: grid;
+            gap: 8px;
+            overflow-wrap: anywhere;
+        }
+
+        .email-badges,
+        .email-actions {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .email-actions form {
+            margin: 0;
+        }
+
+        .email-actions input[type="hidden"] {
+            display: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 999px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .badge-primary {
+            background: #1e3a8a;
+            color: #dbeafe;
+        }
+
+        .badge-verified {
+            background: #14532d;
+            color: #dcfce7;
+        }
+
+        .badge-unverified {
+            background: #78350f;
+            color: #fef3c7;
+        }
+
+        .button-danger {
+            background: #b91c1c;
+        }
+
+        .button-danger:hover {
+            background: #991b1b;
+        }
+
+        @media (max-width: 720px) {
+            .email-row {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .email-actions {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .email-actions button {
+                width: 100%;
+            }
+        }
+
     </style>
 </head>
 
@@ -173,8 +265,8 @@
             {% if user.is_authenticated %}
                 <span>{{ user.email }}</span>
 
-                <a href="{% url 'account_email' %}">
-                    Email settings
+                <a href="{% url 'accounts:manage' %}">
+                    Account
                 </a>
 
                 <form
@@ -207,8 +299,6 @@
             {{ message }}
         </div>
     {% endfor %}
-
-    {% include "account/email_status.html" %}
 
     {% block content %}{% endblock %}
 </main>
