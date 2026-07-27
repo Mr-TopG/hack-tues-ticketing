@@ -205,5 +205,21 @@
             Manage connected accounts
         </a>
     </section>
+    <section class="card danger-card">
+        <h2>Delete account</h2>
+
+        <p class="muted">
+            Permanently delete your profile, email addresses
+            and connected accounts.
+        </p>
+
+        <a
+            class="button button-danger"
+            href="{% url 'accounts:delete' %}"
+        >
+            Delete account
+        </a>
+    </section>
+
 </div>
 {% endblock %}

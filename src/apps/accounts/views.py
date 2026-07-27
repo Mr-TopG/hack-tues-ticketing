@@ -1,10 +1,13 @@
+from allauth.account.decorators import reauthentication_required
 from allauth.account.models import EmailAddress
 from django.contrib import messages
+from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
-from .forms import ProfileForm
+from .forms import DeleteAccountForm, ProfileForm
 from .verification import is_user_email_verified
 
 
@@ -56,4 +59,40 @@ def manage_account(request):
         request,
         "account/manage.html",
         context,
+    )
+
+
+@login_required
+@reauthentication_required(allow_get=True)
+@require_http_methods(["GET", "POST"])
+def delete_account(request):
+    if request.method == "POST":
+        form = DeleteAccountForm(
+            request.POST,
+            user=request.user,
+        )
+
+        if form.is_valid():
+            user = request.user
+
+            with transaction.atomic():
+                user.delete()
+
+            logout(request)
+
+            messages.success(
+                request,
+                "Your account has been permanently deleted.",
+            )
+
+            return redirect("home")
+    else:
+        form = DeleteAccountForm(user=request.user)
+
+    return render(
+        request,
+        "account/delete_confirm.html",
+        {
+            "form": form,
+        },
     )

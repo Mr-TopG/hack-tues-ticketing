@@ -1,4 +1,5 @@
 from allauth.account.models import EmailAddress
+from allauth.socialaccount.models import SocialAccount
 from allauth.account.signals import email_confirmed
 from django.contrib.auth import get_user_model
 from django.core import mail
@@ -260,4 +261,125 @@ class AccountManagementAccessTests(TestCase):
             response.url.startswith(
                 reverse("account_login")
             )
+        )
+
+
+class AccountDeletionTests(TestCase):
+    password = "StrongDeletePassword123!"
+
+    def setUp(self):
+        self.user = User.objects.create_user(
+            email="delete@example.com",
+            password=self.password,
+            first_name="Delete",
+            last_name="Test",
+        )
+
+        self.email_address = EmailAddress.objects.create(
+            user=self.user,
+            email=self.user.email,
+            primary=True,
+            verified=True,
+        )
+
+        self.social_account = SocialAccount.objects.create(
+            user=self.user,
+            provider="google",
+            uid="google-delete-test",
+        )
+
+    def login_through_allauth(self):
+        response = self.client.post(
+            reverse("account_login"),
+            {
+                "login": self.user.email,
+                "password": self.password,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertIn(
+            "_auth_user_id",
+            self.client.session,
+        )
+
+    def test_delete_page_requires_login(self):
+        response = self.client.get(
+            reverse("accounts:delete")
+        )
+
+        self.assertEqual(response.status_code, 302)
+
+    def test_delete_page_is_available_to_authenticated_user(self):
+        self.login_through_allauth()
+
+        response = self.client.get(
+            reverse("accounts:delete")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Permanently delete account",
+        )
+        self.assertContains(
+            response,
+            self.user.email,
+        )
+
+    def test_wrong_confirmation_email_does_not_delete_account(self):
+        self.login_through_allauth()
+        user_pk = self.user.pk
+
+        response = self.client.post(
+            reverse("accounts:delete"),
+            {
+                "confirmation_email": "wrong@example.com",
+            },
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "The email address does not match your account.",
+        )
+        self.assertTrue(
+            User.objects.filter(pk=user_pk).exists()
+        )
+
+    def test_account_and_related_auth_data_are_deleted(self):
+        self.login_through_allauth()
+
+        user_pk = self.user.pk
+        email_address_pk = self.email_address.pk
+        social_account_pk = self.social_account.pk
+
+        response = self.client.post(
+            reverse("accounts:delete"),
+            {
+                "confirmation_email": self.user.email,
+            },
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("home"),
+        )
+
+        self.assertFalse(
+            User.objects.filter(pk=user_pk).exists()
+        )
+        self.assertFalse(
+            EmailAddress.objects.filter(
+                pk=email_address_pk
+            ).exists()
+        )
+        self.assertFalse(
+            SocialAccount.objects.filter(
+                pk=social_account_pk
+            ).exists()
+        )
+        self.assertNotIn(
+            "_auth_user_id",
+            self.client.session,
         )

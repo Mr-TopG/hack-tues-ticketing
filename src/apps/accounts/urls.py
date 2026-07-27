@@ -12,4 +12,9 @@ urlpatterns = [
         views.manage_account,
         name="manage",
     ),
+    path(
+        "delete/",
+        views.delete_account,
+        name="delete",
+    ),
 ]

@@ -64,3 +64,31 @@ class ProfileForm(forms.ModelForm):
 
     def clean_last_name(self):
         return self.cleaned_data["last_name"].strip()
+
+
+class DeleteAccountForm(forms.Form):
+    confirmation_email = forms.EmailField(
+        label="Confirm your email address",
+        widget=forms.EmailInput(
+            attrs={
+                "autocomplete": "off",
+                "spellcheck": "false",
+            }
+        ),
+    )
+
+    def __init__(self, *args, user, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.user = user
+
+    def clean_confirmation_email(self):
+        confirmation_email = (
+            self.cleaned_data["confirmation_email"].strip()
+        )
+
+        if confirmation_email.casefold() != self.user.email.casefold():
+            raise forms.ValidationError(
+                "The email address does not match your account."
+            )
+
+        return confirmation_email
