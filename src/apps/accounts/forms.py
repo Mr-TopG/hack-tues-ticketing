@@ -1,25 +1,15 @@
 from django import forms
-from django.contrib.auth.forms import UserCreationForm
-
-from .models import User
 
 
-class RegistrationForm(UserCreationForm):
-    email = forms.EmailField(
-        label="Email address",
-        widget=forms.EmailInput(
-            attrs={
-                "autocomplete": "email",
-                "autofocus": True,
-            }
-        ),
-    )
-
+class AdditionalSignupForm(forms.Form):
     first_name = forms.CharField(
         label="First name",
         max_length=150,
         widget=forms.TextInput(
-            attrs={"autocomplete": "given-name"}
+            attrs={
+                "autocomplete": "given-name",
+                "autofocus": True,
+            }
         ),
     )
 
@@ -31,22 +21,13 @@ class RegistrationForm(UserCreationForm):
         ),
     )
 
-    class Meta:
-        model = User
-        fields = (
-            "email",
-            "first_name",
-            "last_name",
-            "password1",
-            "password2",
+    def signup(self, request, user):
+        user.first_name = self.cleaned_data["first_name"].strip()
+        user.last_name = self.cleaned_data["last_name"].strip()
+
+        user.save(
+            update_fields=[
+                "first_name",
+                "last_name",
+            ]
         )
-
-    def clean_email(self):
-        email = self.cleaned_data["email"].strip().lower()
-
-        if User.objects.filter(email__iexact=email).exists():
-            raise forms.ValidationError(
-                "An account with this email address already exists."
-            )
-
-        return email

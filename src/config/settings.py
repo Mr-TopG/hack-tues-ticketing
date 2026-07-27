@@ -38,6 +38,10 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "apps.accounts",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
 ]
 
 
@@ -49,6 +53,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -65,6 +70,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "apps.accounts.context_processors.email_verification_status",
             ],
         },
     },
@@ -193,6 +199,60 @@ EMAIL_VERIFICATION_MAX_AGE = env.int(
     default=86400,
 )
 
-LOGIN_URL = "accounts:login"
+LOGIN_URL = "account_login"
 LOGIN_REDIRECT_URL = "home"
 LOGOUT_REDIRECT_URL = "home"
+
+# django-allauth
+
+AUTHENTICATION_BACKENDS = [
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
+]
+
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+ACCOUNT_USER_MODEL_EMAIL_FIELD = "email"
+
+ACCOUNT_LOGIN_METHODS = {"email"}
+
+ACCOUNT_SIGNUP_FIELDS = [
+    "email*",
+    "password1*",
+    "password2*",
+]
+
+ACCOUNT_SIGNUP_FORM_CLASS = (
+    "apps.accounts.forms.AdditionalSignupForm"
+)
+
+ACCOUNT_EMAIL_VERIFICATION = "mandatory"
+
+ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS = env.int(
+    "ACCOUNT_EMAIL_CONFIRMATION_EXPIRE_DAYS",
+    default=1,
+)
+
+ACCOUNT_LOGIN_ON_EMAIL_CONFIRMATION = True
+ACCOUNT_LOGOUT_REDIRECT_URL = "home"
+ACCOUNT_EMAIL_SUBJECT_PREFIX = "[Hack TUES Tickets] "
+
+ACCOUNT_PREVENT_ENUMERATION = True
+ACCOUNT_SIGNUP_FORM_HONEYPOT_FIELD = "phone_number"
+
+SOCIALACCOUNT_AUTO_SIGNUP = True
+SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_STORE_TOKENS = False
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": {
+        "SCOPE": [
+            "profile",
+            "email",
+        ],
+        "AUTH_PARAMS": {
+            "access_type": "online",
+        },
+        "OAUTH_PKCE_ENABLED": True,
+        "EMAIL_AUTHENTICATION": True,
+    },
+}

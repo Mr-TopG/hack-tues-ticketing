@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.13,<3.14"
 dependencies = [
     "Django>=5.2.16,<5.3",
+    "django-allauth[socialaccount]>=65.18,<66",
     "django-environ>=0.12,<1",
     "psycopg[binary]>=3.2,<4",
     "redis>=6,<7",

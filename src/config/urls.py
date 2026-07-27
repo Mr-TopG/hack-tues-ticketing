@@ -13,7 +13,7 @@ urlpatterns = [
     ),
     path(
         "accounts/",
-        include("apps.accounts.urls"),
+        include("allauth.urls"),
     ),
     path(
         "admin/",

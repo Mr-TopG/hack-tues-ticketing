@@ -10,23 +10,28 @@
         {% csrf_token %}
         {{ form.as_p }}
 
-        {% if next %}
+        {% if redirect_field_value %}
             <input
                 type="hidden"
-                name="next"
-                value="{{ next }}"
+                name="{{ redirect_field_name }}"
+                value="{{ redirect_field_value }}"
             >
         {% endif %}
 
-        <button type="submit">
-            Log in
-        </button>
+        <button type="submit">Log in</button>
     </form>
 
     <p class="muted">
         No account yet?
-        <a href="{% url 'accounts:register' %}">
+
+        <a href="{% url 'account_signup' %}">
             Register
+        </a>
+    </p>
+
+    <p>
+        <a href="{% url 'account_reset_password' %}">
+            Forgot your password?
         </a>
     </p>
 </section>

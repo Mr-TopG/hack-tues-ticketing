@@ -1,0 +1,32 @@
+{% if user.is_authenticated and not current_email_verified %}
+<section class="email-status email-status-unverified">
+    <div>
+        <strong>Email not verified</strong>
+
+        <span>
+            Verify {{ user.email }} before purchasing tickets.
+        </span>
+    </div>
+
+    <form
+        method="post"
+        action="{% url 'account_email' %}"
+    >
+        {% csrf_token %}
+
+        <input
+            type="hidden"
+            name="email"
+            value="{{ user.email }}"
+        >
+
+        <button
+            type="submit"
+            name="action_send"
+            value="1"
+        >
+            Resend verification email
+        </button>
+    </form>
+</section>
+{% endif %}

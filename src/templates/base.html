@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+
     <meta
         name="viewport"
         content="width=device-width, initial-scale=1"
     >
+
     <title>
         {% block title %}Hack TUES Tickets{% endblock %}
     </title>
@@ -63,16 +65,11 @@
             background: #1f2937;
         }
 
-        .message,
-        .verification-warning {
+        .message {
             margin-bottom: 20px;
             padding: 14px 16px;
             border-radius: 10px;
             background: #374151;
-        }
-
-        .verification-warning {
-            background: #78350f;
         }
 
         label {
@@ -112,18 +109,59 @@
         .inline-form button {
             padding: 0;
             background: transparent;
-            color: #f9fafb;
-        }
-
-        .errorlist {
-            color: #fca5a5;
         }
 
         .muted {
             color: #9ca3af;
         }
+
+        .errorlist {
+            color: #fca5a5;
+        }
+    
+        .email-status {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+            margin-bottom: 24px;
+            padding: 16px 18px;
+            border: 1px solid;
+            border-radius: 12px;
+        }
+
+        .email-status div {
+            display: grid;
+            gap: 4px;
+        }
+
+        .email-status-unverified {
+            border-color: #a16207;
+            background: #422006;
+        }
+
+        .email-status form {
+            flex-shrink: 0;
+        }
+
+        .email-status input[type="hidden"] {
+            display: none;
+        }
+
+        @media (max-width: 640px) {
+            .email-status {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .email-status button {
+                width: 100%;
+            }
+        }
+
     </style>
 </head>
+
 <body>
 <header>
     <nav>
@@ -135,22 +173,26 @@
             {% if user.is_authenticated %}
                 <span>{{ user.email }}</span>
 
+                <a href="{% url 'account_email' %}">
+                    Email settings
+                </a>
+
                 <form
                     class="inline-form"
                     method="post"
-                    action="{% url 'accounts:logout' %}"
+                    action="{% url 'account_logout' %}"
                 >
                     {% csrf_token %}
                     <button type="submit">Log out</button>
                 </form>
             {% else %}
-                <a href="{% url 'accounts:login' %}">
+                <a href="{% url 'account_login' %}">
                     Log in
                 </a>
 
                 <a
                     class="button"
-                    href="{% url 'accounts:register' %}"
+                    href="{% url 'account_signup' %}"
                 >
                     Register
                 </a>
@@ -166,22 +208,7 @@
         </div>
     {% endfor %}
 
-    {% if user.is_authenticated and not user.is_email_verified %}
-        <div class="verification-warning">
-            Your email address is not verified.
-
-            <form
-                class="inline-form"
-                method="post"
-                action="{% url 'accounts:resend-verification' %}"
-            >
-                {% csrf_token %}
-                <button type="submit">
-                    Resend verification email
-                </button>
-            </form>
-        </div>
-    {% endif %}
+    {% include "account/email_status.html" %}
 
     {% block content %}{% endblock %}
 </main>

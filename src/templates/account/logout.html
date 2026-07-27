@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}Log out | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h1>Log out</h1>
+
+    <p>Are you sure you want to log out?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit">Log out</button>
+    </form>
+</section>
+{% endblock %}

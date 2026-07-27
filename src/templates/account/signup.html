@@ -10,14 +10,21 @@
         {% csrf_token %}
         {{ form.as_p }}
 
-        <button type="submit">
-            Register
-        </button>
+        {% if redirect_field_value %}
+            <input
+                type="hidden"
+                name="{{ redirect_field_name }}"
+                value="{{ redirect_field_value }}"
+            >
+        {% endif %}
+
+        <button type="submit">Register</button>
     </form>
 
     <p class="muted">
         Already registered?
-        <a href="{% url 'accounts:login' %}">
+
+        <a href="{% url 'account_login' %}">
             Log in
         </a>
     </p>

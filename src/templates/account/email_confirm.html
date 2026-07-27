@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm email | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card">
+    {% if confirmation %}
+        <h1>Confirm your email</h1>
+
+        <p>
+            Confirm
+            <strong>{{ confirmation.email_address.email }}</strong>
+            as your email address.
+        </p>
+
+        <form
+            method="post"
+            action="{% url 'account_confirm_email' confirmation.key %}"
+        >
+            {% csrf_token %}
+            <button type="submit">Confirm email</button>
+        </form>
+    {% else %}
+        <h1>Invalid confirmation link</h1>
+
+        <p>
+            This email-confirmation link is invalid or expired.
+        </p>
+    {% endif %}
+</section>
+{% endblock %}
