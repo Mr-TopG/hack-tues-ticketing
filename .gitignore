@@ -141,3 +141,6 @@ tickets/
 compose.override.yaml
 docker-compose.override.yml
 
+
+# uv temporary cache
+.uv-cache/

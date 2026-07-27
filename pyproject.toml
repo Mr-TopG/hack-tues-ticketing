@@ -1,0 +1,35 @@
+[project]
+name = "hack-tues-ticketing"
+version = "0.1.0"
+description = "Concurrent ticket-sales platform for Hack TUES 13 and TUES Fest 2027"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "Django>=5.2.16,<5.3",
+    "django-environ>=0.12,<1",
+    "psycopg[binary]>=3.2,<4",
+    "redis>=6,<7",
+    "whitenoise>=6.9,<7",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8,<9",
+    "pytest-django>=4,<5",
+    "ruff>=0.12,<1",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
