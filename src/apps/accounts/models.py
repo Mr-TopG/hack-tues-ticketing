@@ -23,5 +23,11 @@ class User(AbstractUser):
     def is_email_verified(self):
         return self.email_verified_at is not None
 
+    def save(self, *args, **kwargs):
+        if self.email:
+            self.email = self.email.strip().lower()
+
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return self.email

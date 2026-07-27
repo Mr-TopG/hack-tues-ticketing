@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Home | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h1>Hack TUES Ticketing Platform</h1>
+
+    <p>
+        The ticketing platform is under active development.
+    </p>
+
+    {% if user.is_authenticated %}
+        <p>
+            You are signed in as <strong>{{ user.email }}</strong>.
+        </p>
+
+        {% if user.is_email_verified %}
+            <p>Your email address is verified.</p>
+        {% else %}
+            <p>
+                Verify your email before purchasing a ticket.
+            </p>
+        {% endif %}
+    {% else %}
+        <p>
+            Create an account to prepare for ticket registration.
+        </p>
+
+        <a
+            class="button"
+            href="{% url 'accounts:register' %}"
+        >
+            Create account
+        </a>
+    {% endif %}
+</section>
+{% endblock %}

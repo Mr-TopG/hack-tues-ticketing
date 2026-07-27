@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<body style="font-family: sans-serif; line-height: 1.5;">
+    <h1>Verify your email address</h1>
+
+    <p>Hello {{ user.first_name }},</p>
+
+    <p>
+        Confirm your email address to activate ticket purchasing.
+    </p>
+
+    <p>
+        <a
+            href="{{ verification_url }}"
+            style="
+                display: inline-block;
+                padding: 12px 18px;
+                border-radius: 8px;
+                background: #2563eb;
+                color: white;
+                text-decoration: none;
+            "
+        >
+            Verify email
+        </a>
+    </p>
+
+    <p>
+        This link expires after {{ expiry_hours }} hours.
+    </p>
+
+    <p>
+        If you did not create this account, you can ignore
+        this email.
+    </p>
+</body>
+</html>

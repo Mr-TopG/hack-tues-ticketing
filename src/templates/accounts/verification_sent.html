@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block title %}Verify email | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card">
+    <h1>Check your email</h1>
+
+    <p>
+        We sent a verification link to
+        <strong>{{ user.email }}</strong>.
+    </p>
+
+    <p>
+        The link expires after 24 hours.
+    </p>
+
+    <p class="muted">
+        During development, the email is printed in the
+        Docker web-service logs.
+    </p>
+</section>
+{% endblock %}

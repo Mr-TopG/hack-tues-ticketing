@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1"
+    >
+    <title>
+        {% block title %}Hack TUES Tickets{% endblock %}
+    </title>
+
+    <style>
+        :root {
+            color-scheme: dark;
+            font-family: system-ui, sans-serif;
+        }
+
+        body {
+            margin: 0;
+            background: #111827;
+            color: #f9fafb;
+        }
+
+        header {
+            border-bottom: 1px solid #374151;
+            background: #1f2937;
+        }
+
+        nav,
+        main {
+            width: min(960px, calc(100% - 32px));
+            margin: 0 auto;
+        }
+
+        nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            min-height: 64px;
+        }
+
+        nav a {
+            color: #f9fafb;
+            text-decoration: none;
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        main {
+            padding: 48px 0;
+        }
+
+        .card {
+            max-width: 560px;
+            padding: 28px;
+            border: 1px solid #374151;
+            border-radius: 16px;
+            background: #1f2937;
+        }
+
+        .message,
+        .verification-warning {
+            margin-bottom: 20px;
+            padding: 14px 16px;
+            border-radius: 10px;
+            background: #374151;
+        }
+
+        .verification-warning {
+            background: #78350f;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        input {
+            box-sizing: border-box;
+            width: 100%;
+            margin-bottom: 16px;
+            padding: 11px;
+            border: 1px solid #4b5563;
+            border-radius: 8px;
+            background: #111827;
+            color: #f9fafb;
+        }
+
+        button,
+        .button {
+            display: inline-block;
+            padding: 10px 16px;
+            border: 0;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font: inherit;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .inline-form {
+            display: inline;
+        }
+
+        .inline-form button {
+            padding: 0;
+            background: transparent;
+            color: #f9fafb;
+        }
+
+        .errorlist {
+            color: #fca5a5;
+        }
+
+        .muted {
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body>
+<header>
+    <nav>
+        <a href="{% url 'home' %}">
+            <strong>Hack TUES Tickets</strong>
+        </a>
+
+        <div class="nav-actions">
+            {% if user.is_authenticated %}
+                <span>{{ user.email }}</span>
+
+                <form
+                    class="inline-form"
+                    method="post"
+                    action="{% url 'accounts:logout' %}"
+                >
+                    {% csrf_token %}
+                    <button type="submit">Log out</button>
+                </form>
+            {% else %}
+                <a href="{% url 'accounts:login' %}">
+                    Log in
+                </a>
+
+                <a
+                    class="button"
+                    href="{% url 'accounts:register' %}"
+                >
+                    Register
+                </a>
+            {% endif %}
+        </div>
+    </nav>
+</header>
+
+<main>
+    {% for message in messages %}
+        <div class="message">
+            {{ message }}
+        </div>
+    {% endfor %}
+
+    {% if user.is_authenticated and not user.is_email_verified %}
+        <div class="verification-warning">
+            Your email address is not verified.
+
+            <form
+                class="inline-form"
+                method="post"
+                action="{% url 'accounts:resend-verification' %}"
+            >
+                {% csrf_token %}
+                <button type="submit">
+                    Resend verification email
+                </button>
+            </form>
+        </div>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>

@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Email verification | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card">
+    {% if verification_status == "verified" %}
+        <h1>Email verified</h1>
+
+        <p>
+            Your email address has been successfully verified.
+        </p>
+
+        <a class="button" href="{% url 'home' %}">
+            Continue
+        </a>
+
+    {% elif verification_status == "already_verified" %}
+        <h1>Already verified</h1>
+
+        <p>
+            This email address was already verified.
+        </p>
+
+        <a class="button" href="{% url 'home' %}">
+            Continue
+        </a>
+
+    {% elif verification_status == "expired" %}
+        <h1>Verification link expired</h1>
+
+        <p>
+            Log in and request a new verification email.
+        </p>
+
+        <a
+            class="button"
+            href="{% url 'accounts:login' %}"
+        >
+            Log in
+        </a>
+
+    {% else %}
+        <h1>Invalid verification link</h1>
+
+        <p>
+            The verification link is invalid or has been modified.
+        </p>
+    {% endif %}
+</section>
+{% endblock %}

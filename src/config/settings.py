@@ -182,3 +182,17 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 AUTH_USER_MODEL = "accounts.User"
+
+APP_BASE_URL = env(
+    "APP_BASE_URL",
+    default="http://localhost:8000",
+).rstrip("/")
+
+EMAIL_VERIFICATION_MAX_AGE = env.int(
+    "EMAIL_VERIFICATION_MAX_AGE",
+    default=86400,
+)
+
+LOGIN_URL = "accounts:login"
+LOGIN_REDIRECT_URL = "home"
+LOGOUT_REDIRECT_URL = "home"
