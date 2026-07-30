@@ -53,6 +53,7 @@ services:
     volumes:
       - .:/app
       - media_data:/app/media
+      - private_media_data:/app/private-media
       - static_data:/app/staticfiles
     ports:
       - "8000:8000"
@@ -80,4 +81,5 @@ volumes:
   postgres_data:
   redis_data:
   media_data:
+  private_media_data:
   static_data:

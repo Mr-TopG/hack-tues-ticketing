@@ -99,6 +99,15 @@
             {% endif %}
 
             <div class="management-actions">
+                {% if ticket.is_valid_for_entry %}
+                    <a
+                        class="button"
+                        href="{% url 'tickets:pdf' ticket.pk %}"
+                    >
+                        Download PDF ticket
+                    </a>
+                {% endif %}
+
                 <a
                     class="button button-secondary"
                     href="{{ ticket.category.event.get_absolute_url }}"

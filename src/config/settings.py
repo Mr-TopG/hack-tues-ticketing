@@ -132,6 +132,35 @@ MEDIA_URL = env("MEDIA_URL", default="/media/")
 MEDIA_ROOT = Path(
     env("MEDIA_ROOT", default="/app/media")
 )
+PRIVATE_MEDIA_ROOT = Path(
+    env(
+        "PRIVATE_MEDIA_ROOT",
+        default="/app/private-media",
+    )
+)
+
+STORAGES = {
+    "default": {
+        "BACKEND": (
+            "django.core.files.storage.FileSystemStorage"
+        ),
+    },
+    "staticfiles": {
+        "BACKEND": (
+            "django.contrib.staticfiles.storage.StaticFilesStorage"
+        ),
+    },
+    "ticket_pdfs": {
+        "BACKEND": (
+            "apps.tickets.storage.PrivateFileSystemStorage"
+        ),
+        "OPTIONS": {
+            "location": PRIVATE_MEDIA_ROOT,
+            "file_permissions_mode": 0o600,
+            "directory_permissions_mode": 0o700,
+        },
+    },
+}
 
 
 EMAIL_BACKEND = env(
@@ -194,6 +223,22 @@ APP_BASE_URL = env(
     "APP_BASE_URL",
     default="http://localhost:8000",
 ).rstrip("/")
+
+TICKET_PDF_FONT_PATH = env(
+    "TICKET_PDF_FONT_PATH",
+    default=(
+        "/usr/share/fonts/truetype/dejavu/"
+        "DejaVuSans.ttf"
+    ),
+)
+
+TICKET_PDF_BOLD_FONT_PATH = env(
+    "TICKET_PDF_BOLD_FONT_PATH",
+    default=(
+        "/usr/share/fonts/truetype/dejavu/"
+        "DejaVuSans-Bold.ttf"
+    ),
+)
 
 EMAIL_VERIFICATION_MAX_AGE = env.int(
     "EMAIL_VERIFICATION_MAX_AGE",

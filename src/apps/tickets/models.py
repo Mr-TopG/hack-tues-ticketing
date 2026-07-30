@@ -75,6 +75,23 @@ class Ticket(models.Model):
         on_delete=models.PROTECT,
         related_name="checked_in_tickets",
     )
+    pdf_storage_name = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        editable=False,
+    )
+    pdf_source_hash = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        editable=False,
+    )
+    pdf_generated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        editable=False,
+    )
 
     class Meta:
         ordering = ("-issued_at",)
@@ -117,6 +134,21 @@ class Ticket(models.Model):
                     )
                 ),
                 name="ticket_status_timestamps_consistent",
+            ),
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        pdf_storage_name="",
+                        pdf_source_hash="",
+                        pdf_generated_at__isnull=True,
+                    )
+                    | (
+                        ~Q(pdf_storage_name="")
+                        & ~Q(pdf_source_hash="")
+                        & Q(pdf_generated_at__isnull=False)
+                    )
+                ),
+                name="ticket_pdf_metadata_consistent",
             ),
         ]
 

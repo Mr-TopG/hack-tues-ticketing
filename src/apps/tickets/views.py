@@ -1,10 +1,9 @@
-from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
-from django.http import Http404, HttpResponse
+from django.core.files.storage import storages
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import (
     require_http_methods,
@@ -16,7 +15,12 @@ from apps.events.models import TicketCategory
 
 from .forms import TicketCheckInLookupForm, TicketIssueForm
 from .models import Ticket
-from .qr import render_qr_svg
+from .pdf_service import (
+    TicketPdfError,
+    TicketPdfUnavailableError,
+    get_or_generate_ticket_pdf,
+)
+from .qr import render_qr_svg, ticket_check_in_url
 from .services import (
     TicketCancellationError,
     TicketCheckInError,
@@ -161,17 +165,10 @@ def ticket_qr(request, ticket_id):
         category__event__status="published",
         category__event__ends_at__gt=timezone.now(),
     )
-    check_in_path = reverse(
-        "tickets:check_in",
-        kwargs={
-            "validation_token": ticket.validation_token,
-        },
-    )
-    check_in_url = (
-        f"{settings.APP_BASE_URL.rstrip('/')}{check_in_path}"
-    )
     response = HttpResponse(
-        render_qr_svg(check_in_url),
+        render_qr_svg(
+            ticket_check_in_url(ticket.validation_token)
+        ),
         content_type="image/svg+xml",
     )
     response.headers["Content-Disposition"] = (
@@ -181,6 +178,45 @@ def ticket_qr(request, ticket_id):
     response.headers["Content-Security-Policy"] = (
         "default-src 'none'; sandbox"
     )
+    return _private_no_store(response)
+
+
+@login_required
+@require_safe
+def ticket_pdf(request, ticket_id):
+    try:
+        result = get_or_generate_ticket_pdf(
+            user=request.user,
+            ticket_id=ticket_id,
+        )
+    except TicketNotFoundError as error:
+        raise Http404 from error
+    except TicketPdfUnavailableError as error:
+        messages.error(request, str(error))
+        return redirect("tickets:my_tickets")
+    except TicketPdfError as error:
+        messages.error(request, str(error))
+        return redirect("tickets:my_tickets")
+
+    try:
+        pdf_file = storages["ticket_pdfs"].open(
+            result.storage_name,
+            "rb",
+        )
+    except (OSError, ValueError):
+        messages.error(
+            request,
+            "The ticket PDF could not be opened. Please try again.",
+        )
+        return redirect("tickets:my_tickets")
+
+    response = FileResponse(
+        pdf_file,
+        as_attachment=True,
+        filename=f"ticket-{result.ticket.pk}.pdf",
+        content_type="application/pdf",
+    )
+    response.headers["X-Content-Type-Options"] = "nosniff"
     return _private_no_store(response)
 
 

@@ -524,6 +524,13 @@ class MyTicketsViewTests(TicketViewTestCase):
                 kwargs={"ticket_id": issued.pk},
             ),
         )
+        self.assertContains(
+            response,
+            reverse(
+                "tickets:pdf",
+                kwargs={"ticket_id": issued.pk},
+            ),
+        )
         self.assertNotContains(
             response,
             reverse(
@@ -538,6 +545,14 @@ class MyTicketsViewTests(TicketViewTestCase):
                 kwargs={"ticket_id": checked_in.pk},
             ),
         )
+        for ticket in (cancelled, checked_in):
+            self.assertNotContains(
+                response,
+                reverse(
+                    "tickets:pdf",
+                    kwargs={"ticket_id": ticket.pk},
+                ),
+            )
 
 
 class CancelTicketViewTests(TicketViewTestCase):

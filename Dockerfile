@@ -13,6 +13,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY pyproject.toml uv.lock ./
 
 RUN --mount=type=cache,target=/root/.cache/uv \
@@ -20,7 +25,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 
 COPY . .
 
-RUN mkdir -p /app/media /app/staticfiles \
+RUN mkdir -p /app/media /app/private-media /app/staticfiles \
     && useradd --create-home --uid 1000 appuser \
     && chown -R appuser:appuser /app /opt/venv
 

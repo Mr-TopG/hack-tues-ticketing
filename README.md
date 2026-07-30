@@ -114,6 +114,18 @@ scans.
 Production access logs must redact token-bearing
 `/tickets/check-in/` paths.
 
+## PDF tickets
+
+Ticket holders can download an A4 PDF for a currently valid issued
+ticket. PDFs are generated lazily, include the same opaque check-in QR
+code, and are reused until a relevant ticket or event detail changes.
+
+Generated files use Django's `ticket_pdfs` storage alias and a separate
+persistent private-media volume. They have no public storage URL and
+are streamed only through an authenticated, owner-authorized Django
+view. Cancelling or checking in a ticket clears its PDF metadata and
+deletes the stored artifact after the database transaction commits.
+
 ## Repository structure
 
 ```text
@@ -170,9 +182,12 @@ Secrets such as the following must never be committed:
 
 ## Storage
 
-The self-hosted deployment stores generated ticket files on persistent server storage.
+The self-hosted deployment stores generated ticket files in a private
+persistent volume.
 
-Application code will use Django's storage abstraction so that a cloud deployment can switch to an S3-compatible or another object-storage backend without changing the ticket business logic.
+Application code uses Django's storage abstraction so that a cloud
+deployment can switch to an S3-compatible or another object-storage
+backend without changing the ticket business logic.
 
 ## Deployment
 
@@ -214,10 +229,10 @@ The system will use:
 
 ## Status
 
-Development milestone: atomic free-ticket registration and secure QR
-check-in are implemented. Production serving, real outbound email, PDF
-generation, background workers, monitoring, and payments are not yet
-implemented.
+Development milestone: atomic free-ticket registration, secure QR
+check-in, and protected PDF ticket generation are implemented.
+Production serving, real outbound email, background workers,
+monitoring, and payments are not yet implemented.
 
 ## License
 

@@ -10,6 +10,7 @@ from apps.accounts.verification import is_user_email_verified
 from apps.events.models import Event, TicketCategory
 
 from .models import Ticket
+from .storage import clear_ticket_pdf_metadata
 
 
 class TicketServiceError(Exception):
@@ -347,10 +348,14 @@ def cancel_ticket(*, user, ticket_id, moment=None):
 
         ticket.status = Ticket.Status.CANCELLED
         ticket.cancelled_at = cancellation_time
+        clear_ticket_pdf_metadata(ticket)
         ticket.save(
             update_fields=(
                 "status",
                 "cancelled_at",
+                "pdf_storage_name",
+                "pdf_source_hash",
+                "pdf_generated_at",
             )
         )
 
@@ -428,11 +433,15 @@ def check_in_ticket(
         ticket.status = Ticket.Status.CHECKED_IN
         ticket.checked_in_at = check_in_time
         ticket.checked_in_by = user
+        clear_ticket_pdf_metadata(ticket)
         ticket.save(
             update_fields=(
                 "status",
                 "checked_in_at",
                 "checked_in_by",
+                "pdf_storage_name",
+                "pdf_source_hash",
+                "pdf_generated_at",
             )
         )
 

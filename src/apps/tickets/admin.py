@@ -15,6 +15,7 @@ class TicketAdmin(admin.ModelAdmin):
         "cancelled_at",
         "checked_in_at",
         "checked_in_by",
+        "pdf_generated_at",
     )
 
     list_filter = (
@@ -42,6 +43,9 @@ class TicketAdmin(admin.ModelAdmin):
         "cancelled_at",
         "checked_in_at",
         "checked_in_by",
+        "pdf_storage_name",
+        "pdf_source_hash",
+        "pdf_generated_at",
     )
 
     list_select_related = (
