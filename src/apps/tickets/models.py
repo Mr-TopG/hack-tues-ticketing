@@ -188,3 +188,93 @@ class Ticket(models.Model):
     @property
     def is_valid_for_entry(self):
         return self.is_valid_for_entry_at()
+
+
+class TicketEmailDelivery(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SENDING = "sending", "Sending"
+        SENT = "sent", "Sent"
+        FAILED = "failed", "Failed"
+        CANCELLED = "cancelled", "Cancelled"
+
+    id = models.UUIDField(
+        primary_key=True,
+        default=uuid4,
+        editable=False,
+    )
+    ticket = models.OneToOneField(
+        Ticket,
+        on_delete=models.CASCADE,
+        related_name="email_delivery",
+    )
+    recipient = models.EmailField()
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    message_token = models.UUIDField(
+        default=uuid4,
+        editable=False,
+    )
+    attempt_count = models.PositiveSmallIntegerField(default=0)
+    requested_at = models.DateTimeField(auto_now_add=True)
+    last_attempt_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    sent_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+    last_error = models.TextField(
+        blank=True,
+        default="",
+    )
+
+    class Meta:
+        ordering = ("-requested_at",)
+        indexes = [
+            models.Index(
+                fields=("status", "requested_at"),
+                name="ticket_email_status_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        status="pending",
+                        sent_at__isnull=True,
+                    )
+                    | Q(
+                        status="sending",
+                        attempt_count__gte=1,
+                        last_attempt_at__isnull=False,
+                        sent_at__isnull=True,
+                    )
+                    | Q(
+                        status="failed",
+                        attempt_count__gte=1,
+                        last_attempt_at__isnull=False,
+                        sent_at__isnull=True,
+                    )
+                    | Q(
+                        status="sent",
+                        attempt_count__gte=1,
+                        last_attempt_at__isnull=False,
+                        sent_at__isnull=False,
+                    )
+                    | Q(
+                        status="cancelled",
+                        sent_at__isnull=True,
+                    )
+                ),
+                name="ticket_email_delivery_state_consistent",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.ticket_id} → {self.recipient}"

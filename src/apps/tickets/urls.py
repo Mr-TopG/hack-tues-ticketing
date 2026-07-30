@@ -32,6 +32,11 @@ urlpatterns = [
         name="pdf",
     ),
     path(
+        "account/tickets/<uuid:ticket_id>/email/",
+        views.email_ticket,
+        name="email",
+    ),
+    path(
         "check-in/",
         views.check_in_lookup,
         name="check_in_lookup",

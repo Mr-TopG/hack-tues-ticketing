@@ -96,6 +96,21 @@
                         private—anyone with a copy can present it.
                     </p>
                 </section>
+
+                {% with delivery=ticket.email_delivery %}
+                    {% if delivery %}
+                        <p class="muted">
+                            Email delivery:
+                            <strong>
+                                {{ delivery.get_status_display }}
+                            </strong>
+                            {% if delivery.sent_at %}
+                                on
+                                {{ delivery.sent_at|date:"j F Y, H:i" }}
+                            {% endif %}
+                        </p>
+                    {% endif %}
+                {% endwith %}
             {% endif %}
 
             <div class="management-actions">
@@ -106,6 +121,38 @@
                     >
                         Download PDF ticket
                     </a>
+
+                    {% with delivery=ticket.email_delivery %}
+                        {% if delivery.status == "pending" or delivery.status == "sending" %}
+                            <button
+                                class="button button-secondary"
+                                type="button"
+                                disabled
+                            >
+                                Email queued
+                            </button>
+                        {% else %}
+                            <form
+                                method="post"
+                                action="{% url 'tickets:email' ticket.pk %}"
+                            >
+                                {% csrf_token %}
+
+                                <button
+                                    class="button button-secondary"
+                                    type="submit"
+                                >
+                                    {% if delivery.status == "sent" %}
+                                        Email again
+                                    {% elif delivery.status == "failed" %}
+                                        Retry email
+                                    {% else %}
+                                        Email ticket
+                                    {% endif %}
+                                </button>
+                            </form>
+                        {% endif %}
+                    {% endwith %}
                 {% endif %}
 
                 <a

@@ -77,6 +77,53 @@ services:
     init: true
     restart: unless-stopped
 
+  worker:
+    build:
+      context: .
+    working_dir: /app/src
+    env_file:
+      - .env
+    command:
+      - celery
+      - --app=config
+      - worker
+      - --loglevel=INFO
+      - --concurrency=2
+    volumes:
+      - .:/app
+      - media_data:/app/media
+      - private_media_data:/app/private-media
+      - static_data:/app/staticfiles
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+
+  beat:
+    build:
+      context: .
+    working_dir: /app/src
+    env_file:
+      - .env
+    command:
+      - celery
+      - --app=config
+      - beat
+      - --loglevel=INFO
+      - --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    init: true
+    restart: unless-stopped
+
 volumes:
   postgres_data:
   redis_data:

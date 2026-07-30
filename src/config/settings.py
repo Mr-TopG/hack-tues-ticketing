@@ -1,3 +1,4 @@
+from datetime import timedelta
 from pathlib import Path
 
 import environ
@@ -172,6 +173,48 @@ DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
     default="Hack TUES Tickets <tickets@example.com>",
 )
+EMAIL_HOST = env("EMAIL_HOST", default="")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+EMAIL_USE_SSL = env.bool("EMAIL_USE_SSL", default=False)
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
+
+
+CELERY_BROKER_URL = env(
+    "CELERY_BROKER_URL",
+    default="redis://redis:6379/1",
+)
+CELERY_RESULT_BACKEND = env(
+    "CELERY_RESULT_BACKEND",
+    default="redis://redis:6379/2",
+)
+CELERY_TASK_ALWAYS_EAGER = env.bool(
+    "CELERY_TASK_ALWAYS_EAGER",
+    default=False,
+)
+CELERY_TASK_EAGER_PROPAGATES = env.bool(
+    "CELERY_TASK_EAGER_PROPAGATES",
+    default=False,
+)
+CELERY_TASK_IGNORE_RESULT = True
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_TASK_SERIALIZER = "json"
+CELERY_ACCEPT_CONTENT = ("json",)
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_BEAT_SCHEDULE = {
+    "dispatch-pending-ticket-emails": {
+        "task": (
+            "apps.tickets.tasks."
+            "dispatch_pending_ticket_emails"
+        ),
+        "schedule": 60.0,
+    },
+}
 
 
 SESSION_COOKIE_SECURE = env.bool(
@@ -238,6 +281,27 @@ TICKET_PDF_BOLD_FONT_PATH = env(
         "/usr/share/fonts/truetype/dejavu/"
         "DejaVuSans-Bold.ttf"
     ),
+)
+
+MAX_TICKET_FILE_SIZE = env.int(
+    "MAX_TICKET_FILE_SIZE",
+    default=5_242_880,
+)
+EMAIL_DELIVERY_MAX_RETRIES = env.int(
+    "EMAIL_DELIVERY_MAX_RETRIES",
+    default=5,
+)
+TICKET_EMAIL_RESEND_COOLDOWN = timedelta(
+    seconds=env.int(
+        "TICKET_EMAIL_RESEND_COOLDOWN_SECONDS",
+        default=60,
+    )
+)
+TICKET_EMAIL_STALE_AFTER = timedelta(
+    seconds=env.int(
+        "TICKET_EMAIL_STALE_AFTER_SECONDS",
+        default=900,
+    )
 )
 
 EMAIL_VERIFICATION_MAX_AGE = env.int(

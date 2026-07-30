@@ -13,6 +13,12 @@ from django.views.decorators.http import (
 
 from apps.events.models import TicketCategory
 
+from .delivery import (
+    TicketEmailCooldownError,
+    TicketEmailNotFoundError,
+    TicketEmailRequestError,
+    request_ticket_email,
+)
 from .forms import TicketCheckInLookupForm, TicketIssueForm
 from .models import Ticket
 from .pdf_service import (
@@ -97,7 +103,10 @@ def issue_ticket(request, category_id):
 def my_tickets(request):
     tickets = (
         Ticket.objects.filter(user=request.user)
-        .select_related("category__event")
+        .select_related(
+            "category__event",
+            "email_delivery",
+        )
         .order_by("-issued_at")
     )
 
@@ -218,6 +227,38 @@ def ticket_pdf(request, ticket_id):
     )
     response.headers["X-Content-Type-Options"] = "nosniff"
     return _private_no_store(response)
+
+
+@login_required
+@require_POST
+def email_ticket(request, ticket_id):
+    try:
+        result = request_ticket_email(
+            user=request.user,
+            ticket_id=ticket_id,
+        )
+    except TicketEmailNotFoundError as error:
+        raise Http404 from error
+    except TicketEmailCooldownError as error:
+        messages.warning(request, str(error))
+    except TicketEmailRequestError as error:
+        messages.error(request, str(error))
+    else:
+        if result.queued:
+            messages.success(
+                request,
+                f"Your ticket was queued for delivery to "
+                f"{result.delivery.recipient}.",
+            )
+        else:
+            messages.info(
+                request,
+                "Your ticket email is already queued.",
+            )
+
+    return _private_no_store(
+        redirect("tickets:my_tickets")
+    )
 
 
 @login_required

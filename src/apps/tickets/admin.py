@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Ticket
+from .models import Ticket, TicketEmailDelivery
 
 
 @admin.register(Ticket)
@@ -63,6 +63,52 @@ class TicketAdmin(admin.ModelAdmin):
     )
     def event_name(self, ticket):
         return ticket.category.event.name
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(TicketEmailDelivery)
+class TicketEmailDeliveryAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "ticket",
+        "recipient",
+        "status",
+        "attempt_count",
+        "requested_at",
+        "last_attempt_at",
+        "sent_at",
+    )
+    list_filter = ("status",)
+    search_fields = (
+        "id",
+        "ticket__id",
+        "recipient",
+        "ticket__user__email",
+        "ticket__category__event__name",
+    )
+    readonly_fields = (
+        "id",
+        "ticket",
+        "recipient",
+        "status",
+        "message_token",
+        "attempt_count",
+        "requested_at",
+        "last_attempt_at",
+        "sent_at",
+        "last_error",
+    )
+    list_select_related = (
+        "ticket__user",
+        "ticket__category__event",
+    )
+    ordering = ("-requested_at",)
+    date_hierarchy = "requested_at"
 
     def has_add_permission(self, request):
         return False

@@ -126,6 +126,24 @@ are streamed only through an authenticated, owner-authorized Django
 view. Cancelling or checking in a ticket clears its PDF metadata and
 deletes the stored artifact after the database transaction commits.
 
+## Email delivery
+
+Newly issued tickets create a durable email-delivery record in the same
+database transaction. After commit, a Celery worker generates or reuses
+the private PDF and sends a multipart text/HTML email with the ticket
+attached. Ticket allocation never waits for PDF rendering or SMTP.
+
+Delivery attempts use exponential backoff, stable message identifiers,
+and database-backed pending, sending, sent, failed, and cancelled
+states. Celery Beat scans for pending or stale work every minute so a
+temporary broker or worker interruption does not silently lose a
+delivery. Ticket holders can see delivery state and request a
+rate-limited resend from My Tickets.
+
+The development configuration still uses Django's console email
+backend. Configure the documented SMTP environment variables before
+expecting real outbound delivery.
+
 ## Repository structure
 
 ```text
@@ -230,8 +248,8 @@ The system will use:
 ## Status
 
 Development milestone: atomic free-ticket registration, secure QR
-check-in, and protected PDF ticket generation are implemented.
-Production serving, real outbound email, background workers,
+check-in, protected PDF generation, and retry-safe background ticket
+email delivery are implemented. Production serving, production SMTP,
 monitoring, and payments are not yet implemented.
 
 ## License

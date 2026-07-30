@@ -2,6 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 from threading import Barrier
 from unittest import skipUnless
+from unittest.mock import patch
 from uuid import uuid4
 
 from allauth.account.models import EmailAddress
@@ -36,6 +37,11 @@ class TicketAllocationConcurrencyTests(TransactionTestCase):
     barrier_timeout = 30
 
     def setUp(self):
+        self.delivery_enqueue_patcher = patch(
+            "apps.tickets.delivery._enqueue_delivery"
+        )
+        self.delivery_enqueue_patcher.start()
+        self.addCleanup(self.delivery_enqueue_patcher.stop)
         self.now = timezone.now()
         self.event = Event.objects.create(
             name="Concurrency Test Event",

@@ -9,6 +9,10 @@ from apps.accounts.models import OrganizerProfile
 from apps.accounts.verification import is_user_email_verified
 from apps.events.models import Event, TicketCategory
 
+from .delivery import (
+    cancel_ticket_email_delivery,
+    create_ticket_email_delivery,
+)
 from .models import Ticket
 from .storage import clear_ticket_pdf_metadata
 
@@ -286,6 +290,8 @@ def issue_ticket(
                 category_id=category.pk,
             )
 
+        create_ticket_email_delivery(ticket)
+
         return TicketAllocationResult(
             ticket=ticket,
             created=True,
@@ -348,6 +354,7 @@ def cancel_ticket(*, user, ticket_id, moment=None):
 
         ticket.status = Ticket.Status.CANCELLED
         ticket.cancelled_at = cancellation_time
+        cancel_ticket_email_delivery(ticket)
         clear_ticket_pdf_metadata(ticket)
         ticket.save(
             update_fields=(
@@ -433,6 +440,7 @@ def check_in_ticket(
         ticket.status = Ticket.Status.CHECKED_IN
         ticket.checked_in_at = check_in_time
         ticket.checked_in_by = user
+        cancel_ticket_email_delivery(ticket)
         clear_ticket_pdf_metadata(ticket)
         ticket.save(
             update_fields=(

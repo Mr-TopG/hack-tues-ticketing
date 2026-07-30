@@ -1,0 +1,16 @@
+Hello {{ holder_name }},
+
+Your {{ category.name }} ticket for {{ event.name }} is attached as a PDF.
+
+Event: {{ event.name }}
+Venue: {{ event.venue|default:"To be announced" }}
+Starts: {{ event.starts_at|date:"j F Y, H:i T" }}
+Ends: {{ event.ends_at|date:"j F Y, H:i T" }}
+Ticket ID: {{ ticket.pk }}
+
+You can also view your ticket here:
+{{ my_tickets_url }}
+
+Keep your ticket and QR code private. Each ticket can be checked in only once.
+
+Hack TUES Tickets

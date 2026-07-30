@@ -1,5 +1,6 @@
 from datetime import timedelta
 from secrets import token_urlsafe
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 from allauth.account.models import EmailAddress
@@ -13,7 +14,7 @@ from django.utils import timezone
 from apps.accounts.models import OrganizerProfile
 from apps.events.models import Event, TicketCategory
 
-from .models import Ticket
+from .models import Ticket, TicketEmailDelivery
 from .services import (
     AuthenticationRequiredError,
     EmailNotVerifiedError,
@@ -332,6 +333,27 @@ class TicketIssueServiceTests(TicketFixtureMixin, TestCase):
         self.assertEqual(result.ticket.status, Ticket.Status.ISSUED)
         self.assertTrue(result.ticket.counts_against_capacity)
         self.assertEqual(Ticket.objects.count(), 1)
+        delivery = TicketEmailDelivery.objects.get(
+            ticket=result.ticket
+        )
+        self.assertEqual(
+            delivery.status,
+            TicketEmailDelivery.Status.PENDING,
+        )
+        self.assertEqual(delivery.recipient, self.user.email)
+
+    @patch("apps.tickets.delivery._enqueue_delivery")
+    def test_successful_issue_enqueues_email_after_commit(
+        self,
+        enqueue,
+    ):
+        with self.captureOnCommitCallbacks(execute=True):
+            result = self.issue()
+
+        delivery = TicketEmailDelivery.objects.get(
+            ticket=result.ticket
+        )
+        enqueue.assert_called_once_with(delivery.pk)
 
     def test_same_key_replay_returns_existing_ticket(self):
         self.category.capacity = 1
@@ -345,6 +367,7 @@ class TicketIssueServiceTests(TicketFixtureMixin, TestCase):
         self.assertFalse(replay_result.created)
         self.assertEqual(replay_result.ticket.pk, first_result.ticket.pk)
         self.assertEqual(Ticket.objects.count(), 1)
+        self.assertEqual(TicketEmailDelivery.objects.count(), 1)
 
     def test_same_key_reuse_by_another_user_is_rejected(self):
         key = uuid4()

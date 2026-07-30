@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+<body style="margin: 0; background: #f3f4f6; color: #111827;">
+    <div
+        style="
+            width: min(600px, calc(100% - 32px));
+            margin: 0 auto;
+            padding: 32px 0;
+            font-family: Arial, sans-serif;
+        "
+    >
+        <div
+            style="
+                padding: 28px;
+                border: 1px solid #d1d5db;
+                border-radius: 14px;
+                background: #ffffff;
+            "
+        >
+            <h1 style="margin-top: 0;">Your ticket is ready</h1>
+
+            <p>Hello {{ holder_name }},</p>
+
+            <p>
+                Your <strong>{{ category.name }}</strong> ticket for
+                <strong>{{ event.name }}</strong> is attached as a PDF.
+            </p>
+
+            <table
+                role="presentation"
+                style="width: 100%; border-collapse: collapse;"
+            >
+                <tr>
+                    <th
+                        scope="row"
+                        style="padding: 8px; text-align: left;"
+                    >
+                        Venue
+                    </th>
+                    <td style="padding: 8px;">
+                        {{ event.venue|default:"To be announced" }}
+                    </td>
+                </tr>
+                <tr>
+                    <th
+                        scope="row"
+                        style="padding: 8px; text-align: left;"
+                    >
+                        Starts
+                    </th>
+                    <td style="padding: 8px;">
+                        {{ event.starts_at|date:"j F Y, H:i T" }}
+                    </td>
+                </tr>
+                <tr>
+                    <th
+                        scope="row"
+                        style="padding: 8px; text-align: left;"
+                    >
+                        Ends
+                    </th>
+                    <td style="padding: 8px;">
+                        {{ event.ends_at|date:"j F Y, H:i T" }}
+                    </td>
+                </tr>
+                <tr>
+                    <th
+                        scope="row"
+                        style="padding: 8px; text-align: left;"
+                    >
+                        Ticket ID
+                    </th>
+                    <td style="padding: 8px;">{{ ticket.pk }}</td>
+                </tr>
+            </table>
+
+            <p style="margin: 24px 0;">
+                <a
+                    href="{{ my_tickets_url }}"
+                    style="
+                        display: inline-block;
+                        padding: 12px 18px;
+                        border-radius: 8px;
+                        background: #2563eb;
+                        color: #ffffff;
+                        text-decoration: none;
+                    "
+                >
+                    View my tickets
+                </a>
+            </p>
+
+            <p style="color: #4b5563;">
+                Keep your ticket and QR code private. Each ticket can
+                be checked in only once.
+            </p>
+        </div>
+    </div>
+</body>
+</html>
