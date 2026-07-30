@@ -2,6 +2,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from django.core.exceptions import ImproperlyConfigured
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 PROJECT_ROOT = BASE_DIR.parent
@@ -172,6 +173,10 @@ EMAIL_BACKEND = env(
 DEFAULT_FROM_EMAIL = env(
     "DEFAULT_FROM_EMAIL",
     default="Hack TUES Tickets <tickets@example.com>",
+)
+SERVER_EMAIL = env(
+    "SERVER_EMAIL",
+    default="server@example.com",
 )
 EMAIL_HOST = env("EMAIL_HOST", default="")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
@@ -351,18 +356,45 @@ ACCOUNT_SIGNUP_FORM_HONEYPOT_FIELD = "phone_number"
 
 SOCIALACCOUNT_AUTO_SIGNUP = True
 SOCIALACCOUNT_EMAIL_AUTHENTICATION_AUTO_CONNECT = True
+SOCIALACCOUNT_LOGIN_ON_GET = False
 SOCIALACCOUNT_STORE_TOKENS = False
 
-SOCIALACCOUNT_PROVIDERS = {
-    "google": {
-        "SCOPE": [
-            "profile",
-            "email",
-        ],
-        "AUTH_PARAMS": {
-            "access_type": "online",
-        },
-        "OAUTH_PKCE_ENABLED": True,
-        "EMAIL_AUTHENTICATION": True,
+_google_oauth_client_id = env(
+    "GOOGLE_OAUTH_CLIENT_ID",
+    default="",
+).strip()
+_google_oauth_client_secret = env(
+    "GOOGLE_OAUTH_CLIENT_SECRET",
+    default="",
+).strip()
+
+if bool(_google_oauth_client_id) != bool(
+    _google_oauth_client_secret
+):
+    raise ImproperlyConfigured(
+        "GOOGLE_OAUTH_CLIENT_ID and "
+        "GOOGLE_OAUTH_CLIENT_SECRET must be configured together."
+    )
+
+_google_provider = {
+    "SCOPE": [
+        "profile",
+        "email",
+    ],
+    "AUTH_PARAMS": {
+        "access_type": "online",
     },
+    "OAUTH_PKCE_ENABLED": True,
+    "EMAIL_AUTHENTICATION": True,
+}
+
+if _google_oauth_client_id:
+    _google_provider["APP"] = {
+        "client_id": _google_oauth_client_id,
+        "secret": _google_oauth_client_secret,
+        "key": "",
+    }
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google": _google_provider,
 }

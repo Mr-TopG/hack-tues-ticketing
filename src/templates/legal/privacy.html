@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}Privacy Policy | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<article class="card legal-page">
+    <h1>Privacy Policy</h1>
+
+    <p class="muted">
+        Effective date:
+        <time datetime="2026-07-30">30 July 2026</time>
+    </p>
+
+    <p>
+        This policy explains how the Hack TUES Tickets platform at
+        tickets.mrtopg.org ("we", "us", or "the platform") handles
+        personal information when you create an account, register for
+        an event, use a ticket, or manage an event.
+    </p>
+
+    <section>
+        <h2>Information we collect</h2>
+
+        <ul>
+            <li>
+                Account information, including your name, email
+                address, password credentials in hashed form, and
+                email-verification status.
+            </li>
+            <li>
+                If you use Google login, your Google account
+                identifier, verified email address, and basic profile
+                information such as your name. We do not store Google
+                access or refresh tokens.
+            </li>
+            <li>
+                Ticket records, including the event and category,
+                issue and cancellation times, ticket-delivery state,
+                and a private QR validation token.
+            </li>
+            <li>
+                Check-in records, including when a ticket was checked
+                in and the authorized account that performed the
+                check-in.
+            </li>
+            <li>
+                Organizer-request and event-management information,
+                including organization name and the reason supplied
+                for requesting organizer access.
+            </li>
+            <li>
+                Technical and security information such as IP
+                address, browser information, request time, and
+                limited server logs. QR validation tokens are
+                redacted from production access logs.
+            </li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>How we use information</h2>
+
+        <p>We use this information to:</p>
+
+        <ul>
+            <li>create, secure, and support user accounts;</li>
+            <li>allocate tickets fairly and prevent overselling;</li>
+            <li>generate, deliver, validate, and cancel tickets;</li>
+            <li>review organizer requests and operate events;</li>
+            <li>detect abuse and investigate technical problems;</li>
+            <li>send essential account and ticket messages; and</li>
+            <li>meet applicable legal and record-keeping duties.</li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Cookies</h2>
+
+        <p>
+            The platform uses necessary session, authentication, and
+            CSRF-protection cookies. These cookies keep you signed in
+            and protect forms from unauthorized submissions. We do
+            not currently use advertising or analytics cookies.
+        </p>
+    </section>
+
+    <section>
+        <h2>Service providers</h2>
+
+        <p>
+            We share only the information needed to operate the
+            service with infrastructure and authentication providers.
+            These currently include Cloudflare for secure traffic
+            delivery and Google when you choose Google login. An
+            email-delivery provider may process your email address
+            when transactional email is enabled.
+        </p>
+
+        <p>
+            Those providers process information under their own terms
+            and privacy policies. We do not sell personal information.
+        </p>
+    </section>
+
+    <section>
+        <h2>Storage and retention</h2>
+
+        <p>
+            Application data and private ticket files are stored on
+            infrastructure controlled for this platform. We keep
+            information only as long as reasonably necessary to
+            operate events, protect the service, resolve disputes,
+            and satisfy legal obligations.
+        </p>
+
+        <p>
+            You can request account deletion from the Account page.
+            Some ticket and check-in records may need to be retained
+            for event security, fraud prevention, or audit purposes.
+            The platform will explain when those records prevent
+            immediate deletion.
+        </p>
+    </section>
+
+    <section>
+        <h2>Your choices and rights</h2>
+
+        <p>
+            You can update your name, manage connected accounts,
+            cancel an eligible ticket, or request account deletion
+            through the platform. Depending on applicable law, you
+            may also have rights to access, correct, restrict, export,
+            or object to the processing of your personal information.
+        </p>
+    </section>
+
+    <section>
+        <h2>Security</h2>
+
+        <p>
+            We use HTTPS, access controls, private ticket storage,
+            hashed passwords, and opaque QR tokens. No online system
+            can guarantee absolute security, so keep your account and
+            ticket QR code private and contact us if you suspect
+            misuse.
+        </p>
+    </section>
+
+    <section>
+        <h2>Minors</h2>
+
+        <p>
+            If you are below the age at which you can consent to this
+            processing under applicable law, use the platform only
+            with permission from a parent or legal guardian.
+        </p>
+    </section>
+
+    <section>
+        <h2>Changes and contact</h2>
+
+        <p>
+            We may update this policy when the platform or legal
+            requirements change. Material updates will be identified
+            by a new effective date.
+        </p>
+
+        <p>
+            For privacy questions or requests, contact
+            <a href="mailto:tickets@mrtopg.org">
+                tickets@mrtopg.org
+            </a>.
+        </p>
+    </section>
+</article>
+{% endblock %}

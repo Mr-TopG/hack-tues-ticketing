@@ -65,6 +65,32 @@
             padding: 48px 0;
         }
 
+        .site-footer {
+            border-top: 1px solid #374151;
+            background: #1f2937;
+        }
+
+        .footer-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            width: min(960px, calc(100% - 32px));
+            min-height: 72px;
+            margin: 0 auto;
+            color: #9ca3af;
+        }
+
+        .footer-links {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .footer-links a {
+            color: #d1d5db;
+        }
+
         .card {
             max-width: 560px;
             padding: 28px;
@@ -140,6 +166,60 @@
             background: transparent;
         }
 
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 24px 0;
+            color: #9ca3af;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            height: 1px;
+            flex: 1;
+            background: #4b5563;
+            content: "";
+        }
+
+        .social-login {
+            margin-bottom: 24px;
+        }
+
+        .button-google {
+            width: 100%;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            color: #1f2937;
+            font-weight: 600;
+        }
+
+        .button-google:hover {
+            background: #f3f4f6;
+        }
+
+        .button-google:focus-visible {
+            outline: 3px solid rgb(59 130 246 / 40%);
+            outline-offset: 2px;
+        }
+
+        .legal-page {
+            max-width: 760px;
+        }
+
+        .legal-page section {
+            margin-top: 32px;
+        }
+
+        .legal-page h2 {
+            font-size: 1.25rem;
+        }
+
+        .legal-page li,
+        .legal-page p {
+            line-height: 1.65;
+        }
+
         .muted {
             color: #9ca3af;
         }
@@ -185,6 +265,12 @@
 
             .email-status button {
                 width: 100%;
+            }
+
+            .footer-content {
+                align-items: flex-start;
+                flex-direction: column;
+                padding: 20px 0;
             }
         }
 
@@ -1056,6 +1142,26 @@
 
     {% block content %}{% endblock %}
 </main>
+
+<footer class="site-footer">
+    <div class="footer-content">
+        <span>Hack TUES Tickets</span>
+
+        <div class="footer-links">
+            <a href="{% url 'privacy_policy' %}">
+                Privacy Policy
+            </a>
+
+            <a href="{% url 'terms_of_service' %}">
+                Terms of Service
+            </a>
+
+            <a href="mailto:tickets@mrtopg.org">
+                Contact
+            </a>
+        </div>
+    </div>
+</footer>
 
 <script
     src="{% static 'vendor/flatpickr/flatpickr.min.js' %}"

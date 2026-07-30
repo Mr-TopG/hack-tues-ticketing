@@ -183,7 +183,13 @@ The planned development environment will be started through Docker Compose:
 docker compose up --build
 ```
 
-Detailed installation instructions will be added after the initial Django and Docker setup is complete.
+With `DJANGO_DEBUG=true`, the web container uses Django's development
+server with automatic source reload.
+
+Production serving uses Gunicorn with ASGI Uvicorn workers and an
+optional Nginx Compose profile. See
+[`deploy/README.md`](deploy/README.md) for the required security
+settings and deployment sequence.
 
 ## Configuration
 
@@ -248,9 +254,10 @@ The system will use:
 ## Status
 
 Development milestone: atomic free-ticket registration, secure QR
-check-in, protected PDF generation, and retry-safe background ticket
-email delivery are implemented. Production serving, production SMTP,
-monitoring, and payments are not yet implemented.
+check-in, protected PDF generation, retry-safe background email
+delivery, and production ASGI/Nginx serving are implemented.
+Production SMTP credentials, TLS/domain setup, monitoring, and
+payments are not yet implemented.
 
 ## License
 

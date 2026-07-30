@@ -1,0 +1,26 @@
+{% load socialaccount %}
+
+{% get_providers as socialaccount_providers %}
+
+{% for provider in socialaccount_providers %}
+    {% if provider.id == "google" %}
+        <div class="auth-divider" aria-hidden="true">
+            <span>or</span>
+        </div>
+
+        <form
+            method="post"
+            action="{% provider_login_url provider.id %}"
+            class="social-login"
+        >
+            {% csrf_token %}
+
+            <button
+                type="submit"
+                class="button-google"
+            >
+                Continue with Google
+            </button>
+        </form>
+    {% endif %}
+{% endfor %}

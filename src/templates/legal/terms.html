@@ -1,0 +1,180 @@
+{% extends "base.html" %}
+
+{% block title %}Terms of Service | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<article class="card legal-page">
+    <h1>Terms of Service</h1>
+
+    <p class="muted">
+        Effective date:
+        <time datetime="2026-07-30">30 July 2026</time>
+    </p>
+
+    <p>
+        These terms govern your use of the Hack TUES Tickets platform
+        at tickets.mrtopg.org. By creating an account, registering for
+        an event, or managing an event, you agree to these terms and
+        the
+        <a href="{% url 'privacy_policy' %}">Privacy Policy</a>.
+    </p>
+
+    <section>
+        <h2>Accounts</h2>
+
+        <ul>
+            <li>
+                Provide accurate information and keep your login
+                method secure.
+            </li>
+            <li>
+                You are responsible for activity performed through
+                your account.
+            </li>
+            <li>
+                Do not share access to organizer or check-in
+                functions with unauthorized people.
+            </li>
+            <li>
+                If you are unable to accept these terms yourself,
+                your parent or legal guardian must accept them for
+                you.
+            </li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Tickets and attendance</h2>
+
+        <ul>
+            <li>
+                Registration is subject to event schedules, eligibility
+                rules, category limits, and available capacity.
+            </li>
+            <li>
+                A successful request is not complete until the
+                platform shows an issued ticket.
+            </li>
+            <li>
+                Keep your ticket and QR code private. The first valid
+                check-in is authoritative, and a copied or previously
+                used code may be rejected.
+            </li>
+            <li>
+                Tickets are intended for the account holder and may
+                not be sold, copied, or transferred unless the event
+                organizer expressly allows it.
+            </li>
+            <li>
+                An eligible issued ticket can be cancelled before the
+                event through the platform. Checked-in, expired, or
+                otherwise ineligible tickets cannot be cancelled.
+            </li>
+        </ul>
+
+        <p>
+            The platform currently provides free-ticket registration.
+            If paid tickets are introduced, the applicable price,
+            payment, refund, and cancellation conditions will be
+            presented separately before purchase.
+        </p>
+    </section>
+
+    <section>
+        <h2>Event information and admission</h2>
+
+        <p>
+            Event organizers are responsible for the accuracy of
+            event descriptions, schedules, venues, eligibility rules,
+            and admission decisions. Events may be changed,
+            postponed, completed, or cancelled. We will make
+            reasonable efforts to reflect updates on the platform.
+        </p>
+    </section>
+
+    <section>
+        <h2>Organizer responsibilities</h2>
+
+        <p>
+            Organizers must publish accurate event information,
+            configure capacity responsibly, protect attendee data and
+            check-in tools, and use the platform only for events they
+            are authorized to manage. Organizer access may be reviewed
+            or removed when necessary to protect users or the service.
+        </p>
+    </section>
+
+    <section>
+        <h2>Acceptable use</h2>
+
+        <p>You must not:</p>
+
+        <ul>
+            <li>
+                attempt to reserve more tickets than the applicable
+                limit or bypass fair-allocation controls;
+            </li>
+            <li>
+                automate abusive requests, interfere with service
+                operation, or probe accounts and QR tokens;
+            </li>
+            <li>
+                impersonate another person or submit false organizer
+                information;
+            </li>
+            <li>
+                upload or publish unlawful, harmful, or misleading
+                content; or
+            </li>
+            <li>
+                use the platform in violation of applicable law or
+                another person's rights.
+            </li>
+        </ul>
+    </section>
+
+    <section>
+        <h2>Availability and enforcement</h2>
+
+        <p>
+            We may suspend access, invalidate abusive registrations,
+            or restrict features when reasonably necessary for
+            security, legal compliance, event integrity, or
+            maintenance. We aim to keep the platform reliable, but do
+            not guarantee uninterrupted or error-free availability.
+        </p>
+    </section>
+
+    <section>
+        <h2>Liability</h2>
+
+        <p>
+            To the extent permitted by applicable law, the platform
+            is provided without warranties beyond those that cannot
+            legally be excluded. We are not responsible for indirect
+            losses or for organizer-controlled event changes,
+            admission decisions, or third-party services. Nothing in
+            these terms limits rights or liability that applicable law
+            does not allow to be limited.
+        </p>
+    </section>
+
+    <section>
+        <h2>Changes and contact</h2>
+
+        <p>
+            We may update these terms as the service changes. Material
+            updates will be identified by a new effective date.
+            Continued use after an update means you accept the revised
+            terms.
+        </p>
+
+        <p>
+            Questions about these terms can be sent to
+            <a href="mailto:tickets@mrtopg.org">
+                tickets@mrtopg.org
+            </a>.
+        </p>
+    </section>
+</article>
+{% endblock %}

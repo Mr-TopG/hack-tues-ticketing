@@ -121,6 +121,70 @@ class AllauthLoginTests(TestCase):
         self.assertIsNotNone(user.email_verified_at)
 
 
+class GoogleLoginTemplateTests(TestCase):
+    google_provider_settings = {
+        "google": {
+            "APP": {
+                "client_id": "test-client-id",
+                "secret": "test-client-secret",
+                "key": "",
+            },
+            "SCOPE": [
+                "profile",
+                "email",
+            ],
+            "OAUTH_PKCE_ENABLED": True,
+        },
+    }
+
+    def test_google_login_is_hidden_without_credentials(self):
+        response = self.client.get(
+            reverse("account_login")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertNotContains(
+            response,
+            "Continue with Google",
+        )
+
+    @override_settings(
+        SOCIALACCOUNT_PROVIDERS=google_provider_settings,
+    )
+    def test_login_page_starts_google_login_with_post(self):
+        response = self.client.get(
+            reverse("account_login")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Continue with Google",
+        )
+        self.assertContains(
+            response,
+            f'action="{reverse("google_login")}"',
+        )
+        self.assertContains(
+            response,
+            'method="post"',
+        )
+
+    @override_settings(
+        SOCIALACCOUNT_PROVIDERS=google_provider_settings,
+    )
+    def test_signup_page_offers_google_login(self):
+        response = self.client.get(
+            reverse("account_signup")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            "Continue with Google",
+        )
+
+
 @override_settings(
     EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend",
 )
