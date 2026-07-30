@@ -3,8 +3,13 @@
 {% block title %}Register | Hack TUES Tickets{% endblock %}
 
 {% block content %}
-<section class="card">
+<section class="card auth-card">
+    <p class="eyebrow">Get started</p>
     <h1>Create an account</h1>
+
+    <p class="muted">
+        Register once, then keep every ticket in one place.
+    </p>
 
     <form method="post">
         {% csrf_token %}
@@ -23,12 +28,11 @@
 
     {% include "socialaccount/snippets/google_login.html" %}
 
-    <p class="muted">
-        Already registered?
-
-        <a href="{% url 'account_login' %}">
-            Log in
-        </a>
-    </p>
+    <div class="auth-links">
+        <p class="muted">
+            Already registered?
+            <a href="{% url 'account_login' %}">Log in</a>
+        </p>
+    </div>
 </section>
 {% endblock %}

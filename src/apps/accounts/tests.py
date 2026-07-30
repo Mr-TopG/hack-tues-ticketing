@@ -137,6 +137,13 @@ class GoogleLoginTemplateTests(TestCase):
         },
     }
 
+    @override_settings(
+        SOCIALACCOUNT_PROVIDERS={
+            "google": {
+                "SCOPE": ["profile", "email"],
+            },
+        },
+    )
     def test_google_login_is_hidden_without_credentials(self):
         response = self.client.get(
             reverse("account_login")
@@ -168,6 +175,18 @@ class GoogleLoginTemplateTests(TestCase):
         self.assertContains(
             response,
             'method="post"',
+        )
+
+    def test_password_reset_uses_site_navigation_and_styles(self):
+        response = self.client.get(
+            reverse("account_reset_password")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Hack TUES Tickets")
+        self.assertContains(
+            response,
+            "/static/css/app.css",
         )
 
     @override_settings(

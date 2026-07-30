@@ -4,7 +4,10 @@
 
 {% block content %}
 <p>
-    <a href="{% url 'events_manage:list' %}">
+    <a
+        class="back-link"
+        href="{% url 'events_manage:list' %}"
+    >
         ← Manage events
     </a>
 </p>

@@ -3,29 +3,86 @@
 {% block title %}Home | Hack TUES Tickets{% endblock %}
 
 {% block content %}
-<section class="card">
-    <h1>Hack TUES Ticketing Platform</h1>
+<section class="hero">
+    <div class="hero-copy">
+        <p class="eyebrow">Simple event access</p>
 
-    <p>
-        The ticketing platform is under active development.
-    </p>
+        <h1>Your ticket, without the friction.</h1>
 
-    {% if user.is_authenticated %}
-        <p>
-            You are signed in as
-            <strong>{{ user.email }}</strong>.
-        </p>
-    {% else %}
-        <p>
-            Create an account to prepare for ticket registration.
+        <p class="hero-lead">
+            Find an event, reserve your place, and keep your secure
+            entry code ready on any device.
         </p>
 
-        <a
-            class="button"
-            href="{% url 'account_signup' %}"
-        >
-            Create account
-        </a>
-    {% endif %}
+        <div class="hero-actions">
+            <a
+                class="button"
+                href="{% url 'events:list' %}"
+            >
+                Browse events
+            </a>
+
+            {% if user.is_authenticated %}
+                <a
+                    class="button button-secondary"
+                    href="{% url 'tickets:my_tickets' %}"
+                >
+                    View my tickets
+                </a>
+            {% else %}
+                <a
+                    class="button button-secondary"
+                    href="{% url 'account_signup' %}"
+                >
+                    Create account
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <aside class="hero-panel" aria-labelledby="how-it-works">
+        <p class="eyebrow">How it works</p>
+        <h2 id="how-it-works">Ready in three steps</h2>
+
+        <ol class="steps">
+            <li>
+                <div>
+                    <strong>Choose an event</strong>
+                    <span>See dates, venue, and live availability.</span>
+                </div>
+            </li>
+
+            <li>
+                <div>
+                    <strong>Reserve your place</strong>
+                    <span>Registration is immediate and capacity-safe.</span>
+                </div>
+            </li>
+
+            <li>
+                <div>
+                    <strong>Show your QR code</strong>
+                    <span>Open your ticket on your phone at the entrance.</span>
+                </div>
+            </li>
+        </ol>
+    </aside>
+</section>
+
+<section class="home-benefits" aria-label="Platform benefits">
+    <div class="home-benefit">
+        <strong>Live availability</strong>
+        <span>Capacity updates as tickets are issued.</span>
+    </div>
+
+    <div class="home-benefit">
+        <strong>Private tickets</strong>
+        <span>PDFs and QR codes stay inside your account.</span>
+    </div>
+
+    <div class="home-benefit">
+        <strong>Fast entry</strong>
+        <span>One-time QR validation keeps check-in clear.</span>
+    </div>
 </section>
 {% endblock %}

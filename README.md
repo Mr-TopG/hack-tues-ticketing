@@ -18,12 +18,11 @@ The system is designed to handle hundreds of simultaneous purchase attempts whil
 * Cloud-portable deployment
 * Self-hosted production environment
 
-## Planned technology stack
+## Technology stack
 
 ### Backend
 
 * Django
-* Django Channels
 * Celery
 * PostgreSQL
 * Redis
@@ -31,9 +30,8 @@ The system is designed to handle hundreds of simultaneous purchase attempts whil
 ### Frontend
 
 * Django templates
-* Tailwind CSS
-* HTMX
-* Alpine.js or vanilla JavaScript where required
+* Custom responsive CSS with light and dark themes
+* Vanilla JavaScript for theme and mobile-navigation behavior
 
 ### Infrastructure
 
@@ -41,7 +39,7 @@ The system is designed to handle hundreds of simultaneous purchase attempts whil
 * Docker Compose
 * Nginx
 * Cloudflare
-* Gunicorn or an ASGI application server
+* Gunicorn with ASGI Uvicorn workers
 * Persistent filesystem storage
 
 ## Architecture
@@ -66,21 +64,19 @@ Django ASGI application
    +-- Persistent ticket storage
 ```
 
-PostgreSQL is the authoritative source for users, events, ticket inventory, purchase requests, orders, and issued tickets.
+PostgreSQL is the authoritative source for users, events, ticket
+categories, issued tickets, and delivery state.
 
 Redis is used for:
 
 * Celery task messaging
-* real-time event distribution
-* temporary caching and coordination
+* temporary coordination
 
 Redis is not the authoritative source of ticket availability.
 
 Celery workers handle background operations such as:
 
-* generating PDF tickets
-* storing generated files
-* sending verification emails
+* generating or reusing PDF tickets for email delivery
 * sending ticket emails
 * retrying failed deliveries
 
@@ -97,6 +93,11 @@ Free ticket registration is implemented with:
 
 PostgreSQL is the authoritative inventory source. Redis is not used as a
 ticket counter.
+
+Ticket allocation is serialized per category, which prevents
+overselling under concurrent requests. Strict request-arrival FIFO
+ordering is not implemented yet; adding a durable purchase-request
+queue remains planned work.
 
 ## Ticket validation and check-in
 
@@ -144,6 +145,10 @@ The development configuration still uses Django's console email
 backend. Configure the documented SMTP environment variables before
 expecting real outbound delivery.
 
+Account verification and password-reset messages are handled by
+django-allauth through the configured Django email backend. They are
+therefore also dependent on production SMTP configuration.
+
 ## Repository structure
 
 ```text
@@ -177,7 +182,7 @@ cp .env.example .env
 
 Replace all placeholder secrets and passwords before starting the application.
 
-The planned development environment will be started through Docker Compose:
+Start the development environment through Docker Compose:
 
 ```bash
 docker compose up --build
@@ -225,21 +230,27 @@ The application is designed to remain cloud-portable:
 * no server IP addresses are hardcoded;
 * external services are accessed through configurable URLs.
 
-## Testing strategy
+## Testing
 
-The project will include:
+The current suite contains 196 passing tests covering:
 
-* unit tests;
-* integration tests;
-* authentication and authorization tests;
-* concurrent ticket-allocation tests;
-* duplicate-request tests;
-* load tests;
-* failure and retry tests.
+* unit and integration behavior;
+* authentication, email verification, and authorization;
+* organizer event-management permissions;
+* atomic ticket allocation and cancellation;
+* PostgreSQL concurrency and duplicate-request handling;
+* QR check-in security and concurrent scans;
+* private PDF generation, reuse, invalidation, and downloads;
+* background email delivery, retry, recovery, and resend behavior;
+* production proxy, deployment, and responsive UI configuration.
+
+A separate high-volume load test with hundreds of simulated clients is
+still planned. The existing concurrency tests prove that capacity is
+not oversold, but are not a substitute for performance testing.
 
 ## Security
 
-The system will use:
+The system uses:
 
 * Django ORM and parameterized database access;
 * CSRF protection;
@@ -249,15 +260,39 @@ The system will use:
 * environment-based secrets;
 * secure cookies in production;
 * HTTPS through Cloudflare and Nginx;
-* rate limiting where appropriate.
+* cooldown-based rate limiting for ticket-email resend requests.
 
 ## Status
 
-Development milestone: atomic free-ticket registration, secure QR
-check-in, protected PDF generation, retry-safe background email
-delivery, and production ASGI/Nginx serving are implemented.
-Production SMTP credentials, TLS/domain setup, monitoring, and
-payments are not yet implemented.
+Implemented and deployed:
+
+* multi-event public platform with event and ticket-category pages;
+* mandatory verified-email eligibility for ticket issuance;
+* atomic, idempotent ticket registration without overselling;
+* organizer approval and event create/edit/publish/cancel workflows;
+* private PDF tickets with attendee, event, venue, category, and QR
+  data;
+* owner-only PDF downloads and secure one-time QR check-in;
+* durable Celery ticket-email delivery with retry and recovery states;
+* responsive phone/tablet/desktop UI with persistent light/dark themes;
+* Google OAuth login;
+* Dockerized PostgreSQL, Redis, Celery, Gunicorn, and Nginx production
+  deployment behind Cloudflare at
+  [tickets.mrtopg.org](https://tickets.mrtopg.org/).
+
+Remaining assignment work:
+
+* configure and verify a real production SMTP provider;
+* move private PDF artifacts from the persistent local Docker volume to
+  S3-compatible cloud storage;
+* push availability updates to open pages without a refresh using
+  WebSockets or server-sent events;
+* add strict FIFO purchase-request processing and high-volume load
+  tests;
+* optionally add seat selection and payments.
+
+The public source repository is
+[github.com/Mr-TopG/hack-tues-ticketing](https://github.com/Mr-TopG/hack-tues-ticketing).
 
 ## License
 

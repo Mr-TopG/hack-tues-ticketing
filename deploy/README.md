@@ -35,6 +35,52 @@ EMAIL_HOST_USER=<smtp-user>
 EMAIL_HOST_PASSWORD=<smtp-password>
 ```
 
+### Cloudflare Email Service
+
+If the domain is using Cloudflare, onboard it under **Email Service >
+Email Sending** and create an API token with **Email Sending: Edit**.
+Cloudflare's authenticated SMTP endpoint uses port 465 with implicit
+TLS:
+
+```dotenv
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.mx.cloudflare.net
+EMAIL_PORT=465
+EMAIL_HOST_USER=api_token
+EMAIL_HOST_PASSWORD=<email-sending-api-token>
+EMAIL_USE_TLS=false
+EMAIL_USE_SSL=true
+DEFAULT_FROM_EMAIL=Hack TUES Tickets <tickets@mrtopg.org>
+SERVER_EMAIL=Hack TUES Tickets <tickets@mrtopg.org>
+```
+
+Restart both the web and worker services after changing these values.
+Test delivery to a controlled mailbox before allowing manual signups.
+Never commit the API token.
+
+### Free SMTP alternatives
+
+For a small deployment, Brevo provides a free transactional-email
+allowance and a standard SMTP relay. Authenticate `mrtopg.org`, create
+a dedicated SMTP key, and configure:
+
+```dotenv
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp-relay.brevo.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=<brevo-smtp-login>
+EMAIL_HOST_PASSWORD=<brevo-smtp-key>
+EMAIL_USE_TLS=true
+EMAIL_USE_SSL=false
+DEFAULT_FROM_EMAIL=Hack TUES Tickets <tickets@mrtopg.org>
+SERVER_EMAIL=Hack TUES Tickets <tickets@mrtopg.org>
+```
+
+Resend is another free-tier option. After verifying the domain and
+creating an API key, use `smtp.resend.com`, port 587, username
+`resend`, the API key as the password, STARTTLS enabled, and SSL
+disabled.
+
 Set `SECURE_HSTS_SECONDS` only after HTTPS and proxy forwarding have
 been verified. HSTS mistakes can make a domain inaccessible until the
 policy expires.
