@@ -86,15 +86,17 @@ Celery workers handle background operations such as:
 
 ## Ticket allocation
 
-The ticket-allocation system will be designed to:
+Free ticket registration is implemented with:
 
-* process requests fairly;
-* prevent duplicate purchases;
-* prevent selling more tickets than are available;
-* remain consistent during concurrent requests;
-* recover safely from failed background tasks.
+* PostgreSQL transactions and category-row locking;
+* database-backed idempotency keys for safe retries;
+* per-category capacity and per-user limits;
+* verified-email eligibility checks;
+* ticket history and pre-event cancellation;
+* PostgreSQL concurrency tests that prove capacity cannot be oversold.
 
-PostgreSQL transactions and locking will provide the final protection against overselling.
+PostgreSQL is the authoritative inventory source. Redis is not used as a
+ticket counter.
 
 ## Repository structure
 
@@ -196,9 +198,10 @@ The system will use:
 
 ## Status
 
-Initial repository and architecture setup.
+Development milestone: atomic free-ticket registration is implemented.
+Production serving, real outbound email, QR check-in, PDF generation,
+background workers, monitoring, and payments are not yet implemented.
 
 ## License
 
 A license will be selected before the final public release.
-

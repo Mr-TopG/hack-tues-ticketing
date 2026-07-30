@@ -1,10 +1,13 @@
 from django.contrib import admin
+from django.db import transaction
 
+from .forms import OrganizerTicketCategoryForm
 from .models import Event, TicketCategory
 
 
 class TicketCategoryInline(admin.TabularInline):
     model = TicketCategory
+    form = OrganizerTicketCategoryForm
     extra = 0
 
     fields = (
@@ -64,9 +67,72 @@ class EventAdmin(admin.ModelAdmin):
         TicketCategoryInline,
     )
 
+    def changeform_view(
+        self,
+        request,
+        object_id=None,
+        form_url="",
+        extra_context=None,
+    ):
+        if request.method == "POST" and object_id is not None:
+            with transaction.atomic():
+                list(
+                    TicketCategory.objects.select_for_update(
+                        of=("self",)
+                    )
+                    .filter(event_id=object_id)
+                    .order_by("pk")
+                    .values_list("pk", flat=True)
+                )
+
+                return super().changeform_view(
+                    request,
+                    object_id,
+                    form_url,
+                    extra_context,
+                )
+
+        return super().changeform_view(
+            request,
+            object_id,
+            form_url,
+            extra_context,
+        )
+
 
 @admin.register(TicketCategory)
 class TicketCategoryAdmin(admin.ModelAdmin):
+    def changeform_view(
+        self,
+        request,
+        object_id=None,
+        form_url="",
+        extra_context=None,
+    ):
+        if request.method == "POST" and object_id is not None:
+            with transaction.atomic():
+                list(
+                    TicketCategory.objects.select_for_update(
+                        of=("self",)
+                    )
+                    .filter(pk=object_id)
+                    .values_list("pk", flat=True)
+                )
+
+                return super().changeform_view(
+                    request,
+                    object_id,
+                    form_url,
+                    extra_context,
+                )
+
+        return super().changeform_view(
+            request,
+            object_id,
+            form_url,
+            extra_context,
+        )
+
     list_display = (
         "name",
         "event",

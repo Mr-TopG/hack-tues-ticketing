@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+
+{% block title %}Cancel ticket | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card event-action-card">
+    <h1>Cancel ticket</h1>
+
+    <div class="event-action-summary">
+        <p>
+            <strong>{{ ticket.category.event.name }}</strong>
+        </p>
+
+        <p>{{ ticket.category.name }}</p>
+
+        <p class="muted ticket-id">
+            Ticket ID: {{ ticket.pk }}
+        </p>
+    </div>
+
+    {% if ticket.can_be_cancelled %}
+        <p>
+            Cancelling releases this place for another attendee.
+            This action cannot be undone.
+        </p>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <div class="danger-actions">
+                <button
+                    class="button-danger"
+                    type="submit"
+                >
+                    Cancel ticket
+                </button>
+
+                <a
+                    class="button button-secondary"
+                    href="{% url 'tickets:my_tickets' %}"
+                >
+                    Keep ticket
+                </a>
+            </div>
+        </form>
+    {% else %}
+        {% if ticket.status == "cancelled" %}
+            <p>This ticket has already been cancelled.</p>
+        {% elif ticket.status == "checked_in" %}
+            <p>A checked-in ticket cannot be cancelled.</p>
+        {% else %}
+            <p>Tickets cannot be cancelled after the event starts.</p>
+        {% endif %}
+
+        <a
+            class="button button-secondary"
+            href="{% url 'tickets:my_tickets' %}"
+        >
+            Back to my tickets
+        </a>
+    {% endif %}
+</section>
+{% endblock %}

@@ -4,6 +4,7 @@ from django.contrib import messages
 from django.contrib.auth import logout
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models.deletion import ProtectedError
 from django.shortcuts import redirect, render
 from django.views.decorators.http import require_http_methods
 
@@ -51,6 +52,7 @@ def manage_account(request):
     organizer_profile = OrganizerProfile.objects.filter(
         user=request.user,
     ).first()
+    has_ticket_history = request.user.tickets.exists()
 
     context = {
         "form": form,
@@ -63,6 +65,7 @@ def manage_account(request):
         ),
         "social_accounts": social_accounts,
         "organizer_profile": organizer_profile,
+        "has_ticket_history": has_ticket_history,
     }
 
     return render(
@@ -130,6 +133,15 @@ def request_organizer_access(request):
 @reauthentication_required(allow_get=True)
 @require_http_methods(["GET", "POST"])
 def delete_account(request):
+    has_ticket_history = request.user.tickets.exists()
+
+    if request.method == "POST" and has_ticket_history:
+        messages.error(
+            request,
+            "Accounts with ticket history cannot be permanently deleted.",
+        )
+        return redirect("accounts:manage")
+
     if request.method == "POST":
         form = DeleteAccountForm(
             request.POST,
@@ -139,8 +151,16 @@ def delete_account(request):
         if form.is_valid():
             user = request.user
 
-            with transaction.atomic():
-                user.delete()
+            try:
+                with transaction.atomic():
+                    user.delete()
+            except ProtectedError:
+                messages.error(
+                    request,
+                    "Accounts with ticket history cannot be "
+                    "permanently deleted.",
+                )
+                return redirect("accounts:manage")
 
             logout(request)
 
@@ -158,5 +178,6 @@ def delete_account(request):
         "account/delete_confirm.html",
         {
             "form": form,
+            "has_ticket_history": has_ticket_history,
         },
     )

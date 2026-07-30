@@ -5,7 +5,22 @@
 {% block content %}
 <div class="account-grid">
     <section class="card">
-        <h1>Account management</h1>
+        <h1>My tickets</h1>
+
+        <p class="muted">
+            View your ticket history and cancel eligible tickets.
+        </p>
+
+        <a
+            class="button"
+            href="{% url 'tickets:my_tickets' %}"
+        >
+            View my tickets
+        </a>
+    </section>
+
+    <section class="card">
+        <h2>Account management</h2>
 
         <p class="muted">
             Update the personal information used when issuing
@@ -267,17 +282,25 @@
     <section class="card danger-card">
         <h2>Delete account</h2>
 
-        <p class="muted">
-            Permanently delete your profile, email addresses
-            and connected accounts.
-        </p>
+        {% if has_ticket_history %}
+            <p class="muted">
+                This account has ticket history and cannot be
+                permanently deleted. This protects event and
+                attendance records.
+            </p>
+        {% else %}
+            <p class="muted">
+                Permanently delete your profile, email addresses
+                and connected accounts.
+            </p>
 
-        <a
-            class="button button-danger"
-            href="{% url 'accounts:delete' %}"
-        >
-            Delete account
-        </a>
+            <a
+                class="button button-danger"
+                href="{% url 'accounts:delete' %}"
+            >
+                Delete account
+            </a>
+        {% endif %}
     </section>
 
 </div>

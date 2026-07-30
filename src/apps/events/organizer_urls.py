@@ -23,6 +23,11 @@ urlpatterns = [
         name="edit",
     ),
     path(
+        "<int:pk>/publish/",
+        views.organizer_event_publish,
+        name="publish",
+    ),
+    path(
         "<int:pk>/cancel/",
         views.organizer_event_cancel,
         name="cancel",

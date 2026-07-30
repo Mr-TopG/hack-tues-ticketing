@@ -134,7 +134,7 @@ temp/
 # Generated tickets and documents
 
 *.pdf
-tickets/
+/tickets/
 
 # Local deployment overrides
 

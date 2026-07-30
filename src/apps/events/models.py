@@ -223,6 +223,10 @@ class TicketCategory(models.Model):
                 ),
                 name="category_registration_close_after_open",
             ),
+            models.CheckConstraint(
+                condition=Q(per_user_limit__gte=1),
+                name="category_per_user_limit_at_least_one",
+            ),
         ]
 
     def __str__(self):
@@ -260,20 +264,31 @@ class TicketCategory(models.Model):
     def clean(self):
         super().clean()
 
+        errors = {}
+
         if (
             self.registration_opens_at
             and self.registration_closes_at
             and self.registration_closes_at
             <= self.registration_opens_at
         ):
-            raise ValidationError(
-                {
-                    "registration_closes_at": (
-                        "Category registration must close "
-                        "after it opens."
-                    )
-                }
+            errors["registration_closes_at"] = (
+                "Category registration must close after it opens."
             )
+
+        if self.pk and self.capacity is not None:
+            active_ticket_count = self.tickets.filter(
+                status__in=("issued", "checked_in"),
+            ).count()
+
+            if self.capacity < active_ticket_count:
+                errors["capacity"] = (
+                    "Capacity cannot be lower than the number "
+                    f"of active tickets ({active_ticket_count})."
+                )
+
+        if errors:
+            raise ValidationError(errors)
 
     @property
     def effective_registration_opens_at(self):

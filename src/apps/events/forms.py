@@ -127,6 +127,21 @@ class OrganizerTicketCategoryForm(forms.ModelForm):
             ),
         }
 
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if (
+            cleaned_data.get("DELETE")
+            and self.instance.pk
+            and self.instance.tickets.exists()
+        ):
+            raise forms.ValidationError(
+                "A category with ticket history cannot be deleted. "
+                "Make it inactive instead."
+            )
+
+        return cleaned_data
+
 
 TicketCategoryFormSet = inlineformset_factory(
     Event,

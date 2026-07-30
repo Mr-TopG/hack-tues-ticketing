@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+
+{% block title %}My tickets | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="page-heading management-heading">
+    <div>
+        <h1>My tickets</h1>
+
+        <p class="muted">
+            Your issued, checked-in, and cancelled ticket history.
+        </p>
+    </div>
+
+    <a
+        class="button button-secondary"
+        href="{% url 'events:list' %}"
+    >
+        Browse events
+    </a>
+</section>
+
+<div class="my-ticket-list">
+    {% for ticket in tickets %}
+        <article class="card my-ticket-card">
+            <div class="event-card-heading">
+                <div>
+                    <p class="ticket-category-label">
+                        {{ ticket.category.name }}
+                    </p>
+
+                    <h2>{{ ticket.category.event.name }}</h2>
+                </div>
+
+                <span
+                    class="
+                        status-badge
+                        status-{{ ticket.status }}
+                    "
+                >
+                    {{ ticket.get_status_display }}
+                </span>
+            </div>
+
+            <dl class="event-meta">
+                <div>
+                    <dt>Ticket ID</dt>
+                    <dd class="ticket-id">{{ ticket.pk }}</dd>
+                </div>
+
+                <div>
+                    <dt>Issued</dt>
+                    <dd>{{ ticket.issued_at|date:"j F Y, H:i" }}</dd>
+                </div>
+
+                <div>
+                    <dt>Event starts</dt>
+                    <dd>
+                        {{ ticket.category.event.starts_at|date:"j F Y, H:i" }}
+                    </dd>
+                </div>
+
+                {% if ticket.cancelled_at %}
+                    <div>
+                        <dt>Cancelled</dt>
+                        <dd>
+                            {{ ticket.cancelled_at|date:"j F Y, H:i" }}
+                        </dd>
+                    </div>
+                {% endif %}
+
+                {% if ticket.checked_in_at %}
+                    <div>
+                        <dt>Checked in</dt>
+                        <dd>
+                            {{ ticket.checked_in_at|date:"j F Y, H:i" }}
+                        </dd>
+                    </div>
+                {% endif %}
+            </dl>
+
+            <div class="management-actions">
+                <a
+                    class="button button-secondary"
+                    href="{{ ticket.category.event.get_absolute_url }}"
+                >
+                    View event
+                </a>
+
+                {% if ticket.can_be_cancelled %}
+                    <a
+                        class="button button-danger"
+                        href="{% url 'tickets:cancel' ticket.pk %}"
+                    >
+                        Cancel ticket
+                    </a>
+                {% endif %}
+            </div>
+        </article>
+    {% empty %}
+        <section class="card my-ticket-card">
+            <h2>No tickets yet</h2>
+
+            <p class="muted">
+                Browse open events to get your first ticket.
+            </p>
+
+            <a
+                class="button"
+                href="{% url 'events:list' %}"
+            >
+                Browse events
+            </a>
+        </section>
+    {% endfor %}
+</div>
+{% endblock %}

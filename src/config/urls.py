@@ -7,6 +7,10 @@ from config.views import health
 
 urlpatterns = [
     path(
+        "",
+        include("apps.tickets.urls"),
+    ),
+    path(
         "manage/events/",
         include("apps.events.organizer_urls"),
     ),

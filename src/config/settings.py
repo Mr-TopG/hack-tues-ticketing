@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
     "apps.events.apps.EventsConfig",
+    "apps.tickets.apps.TicketsConfig",
 ]
 
 

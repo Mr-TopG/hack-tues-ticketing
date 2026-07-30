@@ -6,50 +6,70 @@
 <section class="card danger-card">
     <h1>Delete account</h1>
 
-    <p>
-        You are about to permanently delete
-        <strong>{{ user.email }}</strong>.
-    </p>
+    {% if has_ticket_history %}
+        <p>
+            This account has ticket history and cannot be
+            permanently deleted.
+        </p>
 
-    <p class="muted">
-        Your profile, email addresses and connected social accounts
-        will be removed. This action cannot be undone.
-    </p>
+        <p class="muted">
+            Keeping the account protects event and attendance
+            records. Account anonymization can be added later
+            under the platform's retention policy.
+        </p>
 
-    <p>
-        Type your complete email address to confirm:
-    </p>
+        <a
+            class="button button-secondary"
+            href="{% url 'accounts:manage' %}"
+        >
+            Back to account
+        </a>
+    {% else %}
+        <p>
+            You are about to permanently delete
+            <strong>{{ user.email }}</strong>.
+        </p>
 
-    <p>
-        <strong>{{ user.email }}</strong>
-    </p>
+        <p class="muted">
+            Your profile, email addresses and connected social accounts
+            will be removed. This action cannot be undone.
+        </p>
 
-    <form method="post">
-        {% csrf_token %}
+        <p>
+            Type your complete email address to confirm:
+        </p>
 
-        {{ form.non_field_errors }}
+        <p>
+            <strong>{{ user.email }}</strong>
+        </p>
 
-        <div>
-            {{ form.confirmation_email.label_tag }}
-            {{ form.confirmation_email.errors }}
-            {{ form.confirmation_email }}
-        </div>
+        <form method="post">
+            {% csrf_token %}
 
-        <div class="danger-actions">
-            <button
-                class="button-danger"
-                type="submit"
-            >
-                Permanently delete account
-            </button>
+            {{ form.non_field_errors }}
 
-            <a
-                class="button button-secondary"
-                href="{% url 'accounts:manage' %}"
-            >
-                Cancel
-            </a>
-        </div>
-    </form>
+            <div>
+                {{ form.confirmation_email.label_tag }}
+                {{ form.confirmation_email.errors }}
+                {{ form.confirmation_email }}
+            </div>
+
+            <div class="danger-actions">
+                <button
+                    class="button-danger"
+                    type="submit"
+                >
+                    Permanently delete account
+                </button>
+
+                <a
+                    class="button button-secondary"
+                    href="{% url 'accounts:manage' %}"
+                >
+                    Cancel
+                </a>
+            </div>
+        </form>
+    {% endif %}
 </section>
 {% endblock %}

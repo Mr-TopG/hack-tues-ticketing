@@ -19,10 +19,10 @@
         <span
             class="
                 status-badge
-                status-{{ event.registration_state }}
+                status-{{ event.display_registration_state }}
             "
         >
-            {{ event.registration_state|title }}
+            {{ event.display_registration_state|title }}
         </span>
     </div>
 
@@ -69,6 +69,12 @@
 <section class="ticket-section">
     <h2>Ticket categories</h2>
 
+    {% if event.display_registration_state == "open" %}
+        <p class="muted">
+            Registration is open. Choose an available category below.
+        </p>
+    {% endif %}
+
     <div class="ticket-category-list">
         {% for category in event.public_ticket_categories %}
             <article class="ticket-category">
@@ -79,10 +85,10 @@
                         <span
                             class="
                                 status-badge
-                                status-{{ category.registration_state }}
+                                status-{{ category.display_registration_state }}
                             "
                         >
-                            {{ category.registration_state|title }}
+                            {{ category.display_registration_state|title }}
                         </span>
                     </div>
 
@@ -94,6 +100,13 @@
 
                     <div class="ticket-facts">
                         <span>
+                            <strong>Available:</strong>
+                            {{ category.remaining_capacity }}
+                            /
+                            {{ category.capacity }}
+                        </span>
+
+                        <span>
                             <strong>Capacity:</strong>
                             {{ category.capacity }}
                         </span>
@@ -102,7 +115,67 @@
                             <strong>Per-user limit:</strong>
                             {{ category.per_user_limit }}
                         </span>
+
+                        {% if user.is_authenticated %}
+                            <span>
+                                <strong>You hold:</strong>
+                                {{ category.user_active_ticket_count }}
+                            </span>
+                        {% endif %}
                     </div>
+                </div>
+
+                <div class="ticket-action">
+                    {% if category.ticket_action == "issue" %}
+                        <form
+                            method="post"
+                            action="{% url 'tickets:issue' category.pk %}"
+                        >
+                            {% csrf_token %}
+                            {{ category.issue_form.idempotency_key }}
+
+                            <button type="submit">
+                                Get ticket
+                            </button>
+                        </form>
+                    {% elif category.ticket_action == "login" %}
+                        <a
+                            class="button"
+                            href="{% url 'account_login' %}?next={{ request.path|urlencode }}"
+                        >
+                            Log in to get ticket
+                        </a>
+                    {% elif category.ticket_action == "verify" %}
+                        <a
+                            class="button button-warning"
+                            href="{% url 'accounts:manage' %}"
+                        >
+                            Verify email
+                        </a>
+                    {% elif category.ticket_action == "upcoming" %}
+                        <span class="ticket-action-note">
+                            Registration opens later
+                        </span>
+                    {% elif category.ticket_action == "sold_out" %}
+                        <span class="ticket-action-note">
+                            Sold out
+                        </span>
+                    {% elif category.ticket_action == "limit_reached" %}
+                        <span class="ticket-action-note">
+                            Ticket limit reached
+                        </span>
+
+                        <a
+                            class="button button-secondary"
+                            href="{% url 'tickets:my_tickets' %}"
+                        >
+                            View my tickets
+                        </a>
+                    {% else %}
+                        <span class="ticket-action-note">
+                            Registration closed
+                        </span>
+                    {% endif %}
                 </div>
             </article>
         {% empty %}
@@ -113,32 +186,5 @@
             </article>
         {% endfor %}
     </div>
-</section>
-
-<section class="card event-detail">
-    <h2>Ticket registration</h2>
-
-    {% if event.registration_state == "open" %}
-        <p>
-            Registration is open. Ticket allocation will be enabled
-            in the next implementation milestone.
-        </p>
-    {% elif event.registration_state == "upcoming" %}
-        <p>
-            Registration has not opened yet.
-        </p>
-    {% elif event.registration_state == "cancelled" %}
-        <p>
-            This event has been cancelled.
-        </p>
-    {% elif event.registration_state == "completed" %}
-        <p>
-            This event has ended.
-        </p>
-    {% else %}
-        <p>
-            Registration is closed.
-        </p>
-    {% endif %}
 </section>
 {% endblock %}

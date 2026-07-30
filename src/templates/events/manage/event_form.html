@@ -224,15 +224,25 @@
 
             {% if event.status == "draft" %}
                 <p>
-                    This draft can be permanently deleted.
+                    Publish this draft when its details and ticket
+                    categories are ready, or permanently delete it.
                 </p>
 
-                <a
-                    class="button button-danger"
-                    href="{% url 'events_manage:delete' event.pk %}"
-                >
-                    Delete draft
-                </a>
+                <div class="management-actions">
+                    <a
+                        class="button"
+                        href="{% url 'events_manage:publish' event.pk %}"
+                    >
+                        Publish event
+                    </a>
+
+                    <a
+                        class="button button-danger"
+                        href="{% url 'events_manage:delete' event.pk %}"
+                    >
+                        Delete draft
+                    </a>
+                </div>
             {% elif event.status == "published" %}
                 <p>
                     Cancelling keeps the public page available

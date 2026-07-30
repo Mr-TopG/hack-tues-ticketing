@@ -83,6 +83,13 @@
 
                 {% if event.status == "draft" %}
                     <a
+                        class="button"
+                        href="{% url 'events_manage:publish' event.pk %}"
+                    >
+                        Publish event
+                    </a>
+
+                    <a
                         class="button button-danger"
                         href="{% url 'events_manage:delete' event.pk %}"
                     >

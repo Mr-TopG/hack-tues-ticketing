@@ -57,6 +57,7 @@
         .nav-actions {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 16px;
         }
 
@@ -383,6 +384,16 @@
             color: #dcfce7;
         }
 
+        .status-issued {
+            background: #1e3a8a;
+            color: #dbeafe;
+        }
+
+        .status-checked_in {
+            background: #14532d;
+            color: #dcfce7;
+        }
+
         .status-upcoming {
             background: #1e3a8a;
             color: #dbeafe;
@@ -410,10 +421,14 @@
         }
 
         .ticket-category {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            align-items: center;
             padding: 20px;
             border: 1px solid #374151;
             border-radius: 12px;
             background: #1f2937;
+            gap: 24px;
         }
 
         .ticket-facts {
@@ -421,6 +436,43 @@
             flex-wrap: wrap;
             gap: 20px;
             margin-top: 14px;
+        }
+
+        .ticket-action {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .ticket-action form {
+            margin: 0;
+        }
+
+        .ticket-action-note {
+            color: #d1d5db;
+            font-weight: 700;
+        }
+
+        .my-ticket-list {
+            display: grid;
+            gap: 20px;
+        }
+
+        .my-ticket-card {
+            max-width: none;
+        }
+
+        .ticket-category-label {
+            margin: 0 0 6px;
+            color: #93c5fd;
+            font-weight: 700;
+        }
+
+        .ticket-id {
+            overflow-wrap: anywhere;
+            font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
         }
 
         .back-link {
@@ -431,6 +483,23 @@
             .event-card-heading,
             .ticket-category-heading {
                 flex-direction: column;
+            }
+
+            .ticket-category {
+                grid-template-columns: 1fr;
+            }
+
+            .ticket-action {
+                align-items: stretch;
+                justify-content: flex-start;
+                flex-direction: column;
+            }
+
+            .ticket-action .button,
+            .ticket-action button {
+                box-sizing: border-box;
+                width: 100%;
+                text-align: center;
             }
         }
 
@@ -878,6 +947,10 @@
 
             {% if user.is_authenticated %}
                 <span>{{ user.email }}</span>
+
+                <a href="{% url 'tickets:my_tickets' %}">
+                    My tickets
+                </a>
 
                 <a href="{% url 'accounts:manage' %}">
                     Account

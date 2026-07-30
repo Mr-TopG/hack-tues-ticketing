@@ -172,6 +172,120 @@ class OrganizerEventManagementTests(TestCase):
 
         self.assertEqual(response.status_code, 404)
 
+    def test_dashboard_shows_publish_button_for_draft(self):
+        event = self.create_event(
+            status=Event.Status.DRAFT,
+            slug="publish-button",
+        )
+
+        response = self.client.get(
+            reverse("events_manage:list")
+        )
+
+        self.assertContains(
+            response,
+            reverse(
+                "events_manage:publish",
+                kwargs={"pk": event.pk},
+            ),
+        )
+        self.assertContains(response, "Publish event")
+
+    def test_publish_confirmation_get_does_not_publish_event(self):
+        event = self.create_event(
+            status=Event.Status.DRAFT,
+            slug="publish-confirmation",
+        )
+
+        response = self.client.get(
+            reverse(
+                "events_manage:publish",
+                kwargs={"pk": event.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Publish event")
+
+        event.refresh_from_db()
+
+        self.assertEqual(event.status, Event.Status.DRAFT)
+
+    def test_organizer_can_publish_own_draft_event(self):
+        event = self.create_event(
+            status=Event.Status.DRAFT,
+            slug="publish-draft",
+        )
+
+        response = self.client.post(
+            reverse(
+                "events_manage:publish",
+                kwargs={"pk": event.pk},
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("events_manage:list"),
+        )
+
+        event.refresh_from_db()
+
+        self.assertEqual(event.status, Event.Status.PUBLISHED)
+
+        public_response = self.client.get(
+            event.get_absolute_url()
+        )
+
+        self.assertEqual(public_response.status_code, 200)
+
+    def test_organizer_cannot_publish_another_organizers_event(self):
+        another_user = User.objects.create_user(
+            email="publishing-owner@example.com",
+            password="StrongPassword123!",
+        )
+
+        event = self.create_event(
+            organizer=another_user,
+            status=Event.Status.DRAFT,
+            slug="other-publish",
+        )
+
+        response = self.client.post(
+            reverse(
+                "events_manage:publish",
+                kwargs={"pk": event.pk},
+            )
+        )
+
+        self.assertEqual(response.status_code, 404)
+
+        event.refresh_from_db()
+
+        self.assertEqual(event.status, Event.Status.DRAFT)
+
+    def test_non_draft_event_cannot_be_published(self):
+        event = self.create_event(
+            status=Event.Status.CANCELLED,
+            slug="cancelled-publish",
+        )
+
+        response = self.client.post(
+            reverse(
+                "events_manage:publish",
+                kwargs={"pk": event.pk},
+            )
+        )
+
+        self.assertRedirects(
+            response,
+            reverse("events_manage:list"),
+        )
+
+        event.refresh_from_db()
+
+        self.assertEqual(event.status, Event.Status.CANCELLED)
+
     def test_organizer_can_delete_own_draft_event(self):
         event = self.create_event(
             status=Event.Status.DRAFT,
