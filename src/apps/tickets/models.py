@@ -1,9 +1,14 @@
+from secrets import token_urlsafe
 from uuid import uuid4
 
 from django.conf import settings
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+
+
+def generate_validation_token():
+    return token_urlsafe(32)
 
 
 class Ticket(models.Model):
@@ -40,6 +45,13 @@ class Ticket(models.Model):
         editable=False,
     )
 
+    validation_token = models.CharField(
+        max_length=43,
+        unique=True,
+        default=generate_validation_token,
+        editable=False,
+    )
+
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -56,9 +68,22 @@ class Ticket(models.Model):
         null=True,
         blank=True,
     )
+    checked_in_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="checked_in_tickets",
+    )
 
     class Meta:
         ordering = ("-issued_at",)
+        permissions = (
+            (
+                "check_in_ticket",
+                "Can check in tickets for any event",
+            ),
+        )
         indexes = [
             models.Index(
                 fields=("category", "status"),
@@ -76,16 +101,19 @@ class Ticket(models.Model):
                         status="issued",
                         cancelled_at__isnull=True,
                         checked_in_at__isnull=True,
+                        checked_in_by__isnull=True,
                     )
                     | Q(
                         status="cancelled",
                         cancelled_at__isnull=False,
                         checked_in_at__isnull=True,
+                        checked_in_by__isnull=True,
                     )
                     | Q(
                         status="checked_in",
                         cancelled_at__isnull=True,
                         checked_in_at__isnull=False,
+                        checked_in_by__isnull=False,
                     )
                 ),
                 name="ticket_status_timestamps_consistent",
@@ -114,3 +142,17 @@ class Ticket(models.Model):
     @property
     def can_be_cancelled(self):
         return self.can_be_cancelled_at()
+
+    def is_valid_for_entry_at(self, moment=None):
+        moment = moment or timezone.now()
+
+        return (
+            self.status == self.Status.ISSUED
+            and self.category.event.status
+            == self.category.event.Status.PUBLISHED
+            and moment < self.category.event.ends_at
+        )
+
+    @property
+    def is_valid_for_entry(self):
+        return self.is_valid_for_entry_at()

@@ -1,11 +1,17 @@
+from datetime import timedelta
+from uuid import uuid4
+
 from allauth.account.models import EmailAddress
-from allauth.socialaccount.models import SocialAccount
 from allauth.account.signals import email_confirmed
+from allauth.socialaccount.models import SocialAccount
 from django.contrib.auth import get_user_model
 from django.core import mail
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 
+from apps.events.models import Event, TicketCategory
+from apps.tickets.models import Ticket
 
 User = get_user_model()
 
@@ -383,3 +389,113 @@ class AccountDeletionTests(TestCase):
             "_auth_user_id",
             self.client.session,
         )
+
+    def test_check_in_audit_history_blocks_account_deletion(self):
+        now = timezone.now().replace(microsecond=0)
+        ticket_holder = User.objects.create_user(
+            email="checked-in-holder@example.com",
+            password=self.password,
+        )
+        event = Event.objects.create(
+            name="Account Audit Event",
+            slug="account-audit-event",
+            starts_at=now - timedelta(hours=1),
+            ends_at=now + timedelta(days=1),
+            registration_opens_at=now - timedelta(days=2),
+            registration_closes_at=now - timedelta(hours=2),
+            status=Event.Status.PUBLISHED,
+        )
+        category = TicketCategory.objects.create(
+            event=event,
+            name="Participant",
+            slug="participant",
+            capacity=1,
+            per_user_limit=1,
+        )
+        ticket = Ticket.objects.create(
+            user=ticket_holder,
+            category=category,
+            idempotency_key=uuid4(),
+            status=Ticket.Status.CHECKED_IN,
+            checked_in_at=now,
+            checked_in_by=self.user,
+        )
+        user_pk = self.user.pk
+
+        self.assertFalse(self.user.tickets.exists())
+        self.assertEqual(
+            self.user.checked_in_tickets.get(),
+            ticket,
+        )
+
+        self.login_through_allauth()
+
+        manage_response = self.client.get(
+            reverse("accounts:manage")
+        )
+
+        self.assertEqual(manage_response.status_code, 200)
+        self.assertTrue(
+            manage_response.context["has_ticket_history"]
+        )
+        self.assertContains(
+            manage_response,
+            "This account has ticket history and cannot be",
+        )
+        self.assertContains(
+            manage_response,
+            "attendance records",
+        )
+
+        delete_response = self.client.get(
+            reverse("accounts:delete")
+        )
+
+        self.assertEqual(delete_response.status_code, 200)
+        self.assertTrue(
+            delete_response.context["has_ticket_history"]
+        )
+        self.assertContains(
+            delete_response,
+            "This account has ticket history and cannot be",
+        )
+        compact_delete_html = " ".join(
+            delete_response.content.decode().split()
+        )
+        self.assertIn(
+            "protects event and attendance records.",
+            compact_delete_html,
+        )
+        self.assertNotContains(
+            delete_response,
+            'name="confirmation_email"',
+        )
+
+        post_response = self.client.post(
+            reverse("accounts:delete"),
+            {
+                "confirmation_email": self.user.email,
+            },
+            follow=True,
+        )
+
+        self.assertEqual(
+            post_response.redirect_chain,
+            [(reverse("accounts:manage"), 302)],
+        )
+        self.assertContains(
+            post_response,
+            "Accounts with ticket history cannot be permanently deleted.",
+        )
+        self.assertTrue(
+            User.objects.filter(pk=user_pk).exists()
+        )
+        self.assertIn(
+            "_auth_user_id",
+            self.client.session,
+        )
+
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, Ticket.Status.CHECKED_IN)
+        self.assertEqual(ticket.checked_in_at, now)
+        self.assertEqual(ticket.checked_in_by_id, user_pk)

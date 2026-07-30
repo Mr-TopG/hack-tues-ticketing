@@ -79,6 +79,25 @@
                 {% endif %}
             </dl>
 
+            {% if ticket.is_valid_for_entry %}
+                <section class="ticket-qr">
+                    <h3>Entry QR code</h3>
+
+                    <img
+                        class="ticket-qr-image"
+                        src="{% url 'tickets:qr' ticket.pk %}"
+                        alt="Entry QR code for {{ ticket.category.event.name }}"
+                        width="320"
+                        height="320"
+                    >
+
+                    <p class="muted">
+                        Show this code at the entrance. Keep it
+                        private—anyone with a copy can present it.
+                    </p>
+                </section>
+            {% endif %}
+
             <div class="management-actions">
                 <a
                     class="button button-secondary"

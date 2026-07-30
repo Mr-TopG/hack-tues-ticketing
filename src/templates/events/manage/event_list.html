@@ -97,6 +97,13 @@
                     </a>
                 {% elif event.status == "published" %}
                     <a
+                        class="button"
+                        href="{% url 'tickets:check_in_lookup' %}"
+                    >
+                        Check in tickets
+                    </a>
+
+                    <a
                         class="button button-warning"
                         href="{% url 'events_manage:cancel' event.pk %}"
                     >

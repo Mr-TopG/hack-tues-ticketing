@@ -14,6 +14,7 @@ class TicketAdmin(admin.ModelAdmin):
         "issued_at",
         "cancelled_at",
         "checked_in_at",
+        "checked_in_by",
     )
 
     list_filter = (
@@ -40,11 +41,13 @@ class TicketAdmin(admin.ModelAdmin):
         "issued_at",
         "cancelled_at",
         "checked_in_at",
+        "checked_in_by",
     )
 
     list_select_related = (
         "user",
         "category__event",
+        "checked_in_by",
     )
 
     ordering = ("-issued_at",)

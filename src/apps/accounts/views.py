@@ -52,7 +52,10 @@ def manage_account(request):
     organizer_profile = OrganizerProfile.objects.filter(
         user=request.user,
     ).first()
-    has_ticket_history = request.user.tickets.exists()
+    has_ticket_history = (
+        request.user.tickets.exists()
+        or request.user.checked_in_tickets.exists()
+    )
 
     context = {
         "form": form,
@@ -133,7 +136,10 @@ def request_organizer_access(request):
 @reauthentication_required(allow_get=True)
 @require_http_methods(["GET", "POST"])
 def delete_account(request):
-    has_ticket_history = request.user.tickets.exists()
+    has_ticket_history = (
+        request.user.tickets.exists()
+        or request.user.checked_in_tickets.exists()
+    )
 
     if request.method == "POST" and has_ticket_history:
         messages.error(

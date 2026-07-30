@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Ticket check-in | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section class="card check-in-card">
+    <h1>Ticket check-in</h1>
+
+    <p>
+        Scan an attendee's QR code with this device's camera.
+        The scanned link opens a confirmation screen before
+        the ticket is used.
+    </p>
+
+    <p class="muted">
+        If you already have a validation token, you can paste
+        it below.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        {{ form.non_field_errors }}
+
+        <div>
+            {{ form.validation_token.label_tag }}
+            {{ form.validation_token.errors }}
+            {{ form.validation_token }}
+        </div>
+
+        <button type="submit">
+            Find ticket
+        </button>
+    </form>
+</section>
+{% endblock %}

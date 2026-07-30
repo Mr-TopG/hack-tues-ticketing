@@ -475,6 +475,59 @@
             font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
         }
 
+        .ticket-qr {
+            margin: 24px 0;
+            padding: 20px;
+            border: 1px solid #374151;
+            border-radius: 12px;
+            background: #111827;
+        }
+
+        .ticket-qr h3 {
+            margin-top: 0;
+        }
+
+        .ticket-qr-image {
+            display: block;
+            box-sizing: border-box;
+            width: min(100%, 320px);
+            height: auto;
+            margin: 16px 0;
+            padding: 8px;
+            border-radius: 10px;
+            background: #ffffff;
+        }
+
+        .check-in-card {
+            max-width: 680px;
+        }
+
+        .check-in-notice {
+            margin: 22px 0;
+            padding: 16px;
+            border: 1px solid;
+            border-radius: 10px;
+            font-weight: 650;
+        }
+
+        .check-in-notice-ready {
+            border-color: #166534;
+            background: #052e16;
+            color: #dcfce7;
+        }
+
+        .check-in-notice-used {
+            border-color: #92400e;
+            background: #451a03;
+            color: #fef3c7;
+        }
+
+        .check-in-notice-invalid {
+            border-color: #991b1b;
+            background: #450a0a;
+            color: #fee2e2;
+        }
+
         .back-link {
             color: #93c5fd;
         }
@@ -959,6 +1012,14 @@
                 {% if user.organizer_profile.status == "approved" %}
                     <a href="{% url 'events_manage:list' %}">
                         Manage events
+                    </a>
+
+                    <a href="{% url 'tickets:check_in_lookup' %}">
+                        Check in
+                    </a>
+                {% elif perms.tickets.check_in_ticket %}
+                    <a href="{% url 'tickets:check_in_lookup' %}">
+                        Check in
                     </a>
                 {% endif %}
 

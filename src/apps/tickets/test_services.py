@@ -1,33 +1,38 @@
 from datetime import timedelta
+from secrets import token_urlsafe
 from uuid import UUID, uuid4
 
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import AnonymousUser, Permission
 from django.db import IntegrityError, transaction
-from django.db.models.deletion import ProtectedError
+from django.db.models.deletion import PROTECT, ProtectedError
 from django.test import TestCase
 from django.utils import timezone
 
+from apps.accounts.models import OrganizerProfile
 from apps.events.models import Event, TicketCategory
 
 from .models import Ticket
 from .services import (
     AuthenticationRequiredError,
     EmailNotVerifiedError,
+    EventCheckInUnavailableError,
     IdempotencyConflictError,
     InactiveTicketCategoryError,
     InvalidIdempotencyKeyError,
     PerUserLimitReachedError,
     RegistrationClosedError,
     TicketAlreadyCheckedInError,
+    TicketAlreadyCheckedInForEntryError,
     TicketCancellationClosedError,
+    TicketCancelledCheckInError,
     TicketNotFoundError,
     TicketSoldOutError,
     cancel_ticket,
+    check_in_ticket,
     issue_ticket,
 )
-
 
 User = get_user_model()
 
@@ -127,14 +132,64 @@ class TicketModelTests(TicketFixtureMixin, TestCase):
         self.assertIsNotNone(ticket.issued_at)
         self.assertIsNone(ticket.cancelled_at)
         self.assertIsNone(ticket.checked_in_at)
+        self.assertIsNone(ticket.checked_in_by)
 
         id_field = Ticket._meta.get_field("id")
         idempotency_field = Ticket._meta.get_field("idempotency_key")
+        validation_token_field = Ticket._meta.get_field(
+            "validation_token"
+        )
+        checked_in_by_field = Ticket._meta.get_field(
+            "checked_in_by"
+        )
 
         self.assertTrue(id_field.primary_key)
         self.assertFalse(id_field.editable)
         self.assertTrue(idempotency_field.unique)
         self.assertFalse(idempotency_field.editable)
+        self.assertEqual(validation_token_field.max_length, 43)
+        self.assertTrue(validation_token_field.unique)
+        self.assertFalse(validation_token_field.editable)
+        self.assertTrue(checked_in_by_field.null)
+        self.assertTrue(checked_in_by_field.blank)
+        self.assertIs(
+            checked_in_by_field.remote_field.on_delete,
+            PROTECT,
+        )
+
+    def test_validation_tokens_are_unique_and_url_safe(self):
+        tickets = [
+            self.create_ticket()
+            for _number in range(10)
+        ]
+        tokens = {
+            ticket.validation_token
+            for ticket in tickets
+        }
+
+        self.assertEqual(len(tokens), len(tickets))
+
+        for ticket in tickets:
+            with self.subTest(ticket=ticket.pk):
+                self.assertRegex(
+                    ticket.validation_token,
+                    r"\A[A-Za-z0-9_-]{43}\Z",
+                )
+                self.assertNotEqual(
+                    ticket.validation_token,
+                    str(ticket.pk),
+                )
+                self.assertNotEqual(
+                    ticket.validation_token,
+                    str(ticket.idempotency_key),
+                )
+
+    def test_database_rejects_duplicate_validation_token(self):
+        token = token_urlsafe(32)
+        self.create_ticket(validation_token=token)
+
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.create_ticket(validation_token=token)
 
     def test_active_statuses_count_against_capacity(self):
         ticket = self.create_ticket()
@@ -160,23 +215,41 @@ class TicketModelTests(TicketFixtureMixin, TestCase):
                 "status": Ticket.Status.CHECKED_IN,
             },
             {
+                "status": Ticket.Status.ISSUED,
+                "checked_in_by": self.user,
+            },
+            {
+                "status": Ticket.Status.CANCELLED,
+                "cancelled_at": self.now,
+                "checked_in_by": self.user,
+            },
+            {
+                "status": Ticket.Status.CHECKED_IN,
+                "checked_in_at": self.now,
+            },
+            {
+                "status": Ticket.Status.CHECKED_IN,
+                "checked_in_by": self.user,
+            },
+            {
                 "status": "unknown",
             },
         )
 
         for invalid_state in invalid_states:
-            with self.subTest(invalid_state=invalid_state):
-                with self.assertRaises(IntegrityError):
-                    with transaction.atomic():
-                        self.create_ticket(**invalid_state)
+            with (
+                self.subTest(invalid_state=invalid_state),
+                self.assertRaises(IntegrityError),
+                transaction.atomic(),
+            ):
+                self.create_ticket(**invalid_state)
 
     def test_idempotency_key_is_unique(self):
         key = uuid4()
         self.create_ticket(idempotency_key=key)
 
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                self.create_ticket(idempotency_key=key)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            self.create_ticket(idempotency_key=key)
 
     def test_ticket_relationships_protect_history(self):
         ticket = self.create_ticket()
@@ -188,6 +261,28 @@ class TicketModelTests(TicketFixtureMixin, TestCase):
             self.category.delete()
 
         self.assertTrue(Ticket.objects.filter(pk=ticket.pk).exists())
+
+    def test_checked_in_by_relationship_protects_audit_history(self):
+        checker = self.create_user(
+            "audit-checker@example.com",
+            verified=True,
+        )
+        ticket = self.create_ticket(
+            status=Ticket.Status.CHECKED_IN,
+            checked_in_at=self.now,
+            checked_in_by=checker,
+        )
+
+        with self.assertRaises(ProtectedError) as error_context:
+            checker.delete()
+
+        self.assertIn(
+            ticket,
+            error_context.exception.protected_objects,
+        )
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.checked_in_by, checker)
+        self.assertEqual(ticket.checked_in_at, self.now)
 
     def test_cancellation_availability_depends_on_status_and_event_start(self):
         ticket = self.create_ticket()
@@ -345,9 +440,11 @@ class TicketIssueServiceTests(TicketFixtureMixin, TestCase):
         )
 
         for request_time in request_times:
-            with self.subTest(request_time=request_time):
-                with self.assertRaises(RegistrationClosedError):
-                    self.issue(moment=request_time)
+            with (
+                self.subTest(request_time=request_time),
+                self.assertRaises(RegistrationClosedError),
+            ):
+                self.issue(moment=request_time)
 
         self.assertFalse(Ticket.objects.exists())
 
@@ -418,9 +515,14 @@ class TicketIssueServiceTests(TicketFixtureMixin, TestCase):
     def test_checked_in_ticket_can_sell_out_category(self):
         self.category.capacity = 1
         self.category.save(update_fields=("capacity",))
+        checker = self.create_user(
+            "capacity-checker@example.com",
+            verified=True,
+        )
         self.create_ticket(
             status=Ticket.Status.CHECKED_IN,
             checked_in_at=self.now,
+            checked_in_by=checker,
         )
         other_user = self.create_user(
             "checked-in-sold-out@example.com",
@@ -512,12 +614,18 @@ class TicketCancellationServiceTests(TicketFixtureMixin, TestCase):
         self.assertEqual(replay_result.ticket.cancelled_at, first_time)
 
     def test_checked_in_ticket_cannot_be_cancelled(self):
+        checker = self.create_user(
+            "cancellation-checker@example.com",
+            verified=True,
+        )
         self.ticket.status = Ticket.Status.CHECKED_IN
         self.ticket.checked_in_at = self.now
+        self.ticket.checked_in_by = checker
         self.ticket.save(
             update_fields=(
                 "status",
                 "checked_in_at",
+                "checked_in_by",
             )
         )
 
@@ -531,19 +639,22 @@ class TicketCancellationServiceTests(TicketFixtureMixin, TestCase):
         self.ticket.refresh_from_db()
         self.assertEqual(self.ticket.status, Ticket.Status.CHECKED_IN)
         self.assertIsNone(self.ticket.cancelled_at)
+        self.assertEqual(self.ticket.checked_in_by, checker)
 
     def test_ticket_cannot_be_cancelled_at_or_after_event_start(self):
         for cancellation_time in (
             self.event.starts_at,
             self.event.starts_at + timedelta(seconds=1),
         ):
-            with self.subTest(cancellation_time=cancellation_time):
-                with self.assertRaises(TicketCancellationClosedError):
-                    cancel_ticket(
-                        user=self.user,
-                        ticket_id=self.ticket.pk,
-                        moment=cancellation_time,
-                    )
+            with (
+                self.subTest(cancellation_time=cancellation_time),
+                self.assertRaises(TicketCancellationClosedError),
+            ):
+                cancel_ticket(
+                    user=self.user,
+                    ticket_id=self.ticket.pk,
+                    moment=cancellation_time,
+                )
 
         self.ticket.refresh_from_db()
         self.assertEqual(self.ticket.status, Ticket.Status.ISSUED)
@@ -572,3 +683,292 @@ class TicketCancellationServiceTests(TicketFixtureMixin, TestCase):
                 ticket_id=uuid4(),
                 moment=self.now,
             )
+
+
+class TicketCheckInServiceTests(TicketFixtureMixin, TestCase):
+    def setUp(self):
+        super().setUp()
+        self.organizer = self.create_user(
+            "check-in-organizer@example.com",
+            verified=True,
+        )
+        OrganizerProfile.objects.create(
+            user=self.organizer,
+            organization_name="TUES",
+            reason="Check-in service tests.",
+            status=OrganizerProfile.Status.APPROVED,
+        )
+        self.event.organizer = self.organizer
+        self.event.save(update_fields=("organizer",))
+        self.ticket = self.create_ticket()
+
+    def assert_ticket_remains_issued(self):
+        self.ticket.refresh_from_db()
+        self.assertEqual(
+            self.ticket.status,
+            Ticket.Status.ISSUED,
+        )
+        self.assertIsNone(self.ticket.cancelled_at)
+        self.assertIsNone(self.ticket.checked_in_at)
+        self.assertIsNone(self.ticket.checked_in_by)
+
+    def test_check_in_requires_authentication(self):
+        with self.assertRaises(AuthenticationRequiredError):
+            check_in_ticket(
+                user=AnonymousUser(),
+                validation_token=self.ticket.validation_token,
+                moment=self.now,
+            )
+
+        self.assert_ticket_remains_issued()
+
+    def test_approved_event_owner_checks_in_ticket_with_audit(self):
+        check_in_time = self.now + timedelta(minutes=15)
+
+        result = check_in_ticket(
+            user=self.organizer,
+            validation_token=self.ticket.validation_token,
+            moment=check_in_time,
+        )
+
+        self.assertEqual(result.ticket.pk, self.ticket.pk)
+        self.ticket.refresh_from_db()
+        self.assertEqual(
+            self.ticket.status,
+            Ticket.Status.CHECKED_IN,
+        )
+        self.assertEqual(
+            self.ticket.checked_in_at,
+            check_in_time,
+        )
+        self.assertEqual(
+            self.ticket.checked_in_by,
+            self.organizer,
+        )
+        self.assertIsNone(self.ticket.cancelled_at)
+
+    def test_user_with_global_permission_can_check_in_foreign_event(self):
+        global_checker = self.create_user(
+            "global-checker@example.com",
+            verified=True,
+        )
+        permission = Permission.objects.get(
+            content_type__app_label="tickets",
+            codename="check_in_ticket",
+        )
+        global_checker.user_permissions.add(permission)
+        check_in_time = self.now + timedelta(minutes=20)
+
+        result = check_in_ticket(
+            user=global_checker,
+            validation_token=self.ticket.validation_token,
+            moment=check_in_time,
+        )
+
+        self.assertEqual(result.ticket.pk, self.ticket.pk)
+        self.ticket.refresh_from_db()
+        self.assertEqual(
+            self.ticket.status,
+            Ticket.Status.CHECKED_IN,
+        )
+        self.assertEqual(
+            self.ticket.checked_in_at,
+            check_in_time,
+        )
+        self.assertEqual(
+            self.ticket.checked_in_by,
+            global_checker,
+        )
+
+    def test_plain_staff_user_cannot_check_in_ticket(self):
+        staff_user = self.create_user(
+            "plain-staff@example.com",
+            verified=True,
+        )
+        staff_user.is_staff = True
+        staff_user.save(update_fields=("is_staff",))
+
+        with self.assertRaises(TicketNotFoundError):
+            check_in_ticket(
+                user=staff_user,
+                validation_token=self.ticket.validation_token,
+                moment=self.now,
+            )
+
+        self.assert_ticket_remains_issued()
+
+    def test_unapproved_event_owner_cannot_check_in_ticket(self):
+        profile = self.organizer.organizer_profile
+        profile.status = OrganizerProfile.Status.PENDING
+        profile.save(update_fields=("status",))
+
+        with self.assertRaises(TicketNotFoundError):
+            check_in_ticket(
+                user=self.organizer,
+                validation_token=self.ticket.validation_token,
+                moment=self.now,
+            )
+
+        self.assert_ticket_remains_issued()
+
+    def test_approved_foreign_organizer_cannot_check_in_ticket(self):
+        foreign_organizer = self.create_user(
+            "foreign-organizer@example.com",
+            verified=True,
+        )
+        OrganizerProfile.objects.create(
+            user=foreign_organizer,
+            organization_name="Another organization",
+            reason="Foreign organizer authorization test.",
+            status=OrganizerProfile.Status.APPROVED,
+        )
+
+        with self.assertRaises(TicketNotFoundError):
+            check_in_ticket(
+                user=foreign_organizer,
+                validation_token=self.ticket.validation_token,
+                moment=self.now,
+            )
+
+        self.assert_ticket_remains_issued()
+
+    def test_unknown_validation_token_is_not_found(self):
+        unknown_token = token_urlsafe(32)
+        self.assertNotEqual(
+            unknown_token,
+            self.ticket.validation_token,
+        )
+
+        with self.assertRaises(TicketNotFoundError):
+            check_in_ticket(
+                user=self.organizer,
+                validation_token=unknown_token,
+                moment=self.now,
+            )
+
+        self.assert_ticket_remains_issued()
+
+    def test_malformed_validation_tokens_are_not_found(self):
+        invalid_tokens = (
+            None,
+            uuid4(),
+            "",
+            "too-short",
+            "a" * 42,
+            "a" * 44,
+            "!" * 43,
+        )
+
+        for validation_token in invalid_tokens:
+            with (
+                self.subTest(validation_token=validation_token),
+                self.assertRaises(TicketNotFoundError),
+            ):
+                check_in_ticket(
+                    user=self.organizer,
+                    validation_token=validation_token,
+                    moment=self.now,
+                )
+
+        self.assert_ticket_remains_issued()
+
+    def test_cancelled_ticket_cannot_be_checked_in(self):
+        cancellation_time = self.now - timedelta(minutes=10)
+        self.ticket.status = Ticket.Status.CANCELLED
+        self.ticket.cancelled_at = cancellation_time
+        self.ticket.save(
+            update_fields=(
+                "status",
+                "cancelled_at",
+            )
+        )
+
+        with self.assertRaises(TicketCancelledCheckInError):
+            check_in_ticket(
+                user=self.organizer,
+                validation_token=self.ticket.validation_token,
+                moment=self.now,
+            )
+
+        self.ticket.refresh_from_db()
+        self.assertEqual(
+            self.ticket.status,
+            Ticket.Status.CANCELLED,
+        )
+        self.assertEqual(
+            self.ticket.cancelled_at,
+            cancellation_time,
+        )
+        self.assertIsNone(self.ticket.checked_in_at)
+        self.assertIsNone(self.ticket.checked_in_by)
+
+    def test_already_checked_in_ticket_preserves_original_audit(self):
+        original_checker = self.create_user(
+            "original-checker@example.com",
+            verified=True,
+        )
+        original_check_in_time = self.now - timedelta(minutes=30)
+        self.ticket.status = Ticket.Status.CHECKED_IN
+        self.ticket.checked_in_at = original_check_in_time
+        self.ticket.checked_in_by = original_checker
+        self.ticket.save(
+            update_fields=(
+                "status",
+                "checked_in_at",
+                "checked_in_by",
+            )
+        )
+
+        with self.assertRaises(
+            TicketAlreadyCheckedInForEntryError
+        ):
+            check_in_ticket(
+                user=self.organizer,
+                validation_token=self.ticket.validation_token,
+                moment=self.now,
+            )
+
+        self.ticket.refresh_from_db()
+        self.assertEqual(
+            self.ticket.status,
+            Ticket.Status.CHECKED_IN,
+        )
+        self.assertEqual(
+            self.ticket.checked_in_at,
+            original_check_in_time,
+        )
+        self.assertEqual(
+            self.ticket.checked_in_by,
+            original_checker,
+        )
+        self.assertIsNone(self.ticket.cancelled_at)
+
+    def test_cancelled_event_rejects_check_in_without_audit(self):
+        self.event.status = Event.Status.CANCELLED
+        self.event.save(update_fields=("status",))
+
+        with self.assertRaises(EventCheckInUnavailableError):
+            check_in_ticket(
+                user=self.organizer,
+                validation_token=self.ticket.validation_token,
+                moment=self.now,
+            )
+
+        self.assert_ticket_remains_issued()
+
+    def test_event_end_boundary_rejects_check_in_without_audit(self):
+        for check_in_time in (
+            self.event.ends_at,
+            self.event.ends_at + timedelta(seconds=1),
+        ):
+            with (
+                self.subTest(check_in_time=check_in_time),
+                self.assertRaises(EventCheckInUnavailableError),
+            ):
+                check_in_ticket(
+                    user=self.organizer,
+                    validation_token=self.ticket.validation_token,
+                    moment=check_in_time,
+                )
+
+        self.assert_ticket_remains_issued()

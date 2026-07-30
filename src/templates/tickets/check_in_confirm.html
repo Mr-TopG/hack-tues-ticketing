@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm ticket check-in | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<p>
+    <a
+        class="back-link"
+        href="{% url 'tickets:check_in_lookup' %}"
+    >
+        &larr; Check another ticket
+    </a>
+</p>
+
+<section class="card check-in-card">
+    <div class="event-card-heading">
+        <div>
+            <p class="ticket-category-label">
+                {{ ticket.category.name }}
+            </p>
+
+            <h1>{{ ticket.category.event.name }}</h1>
+        </div>
+
+        <span
+            class="
+                status-badge
+                status-{{ ticket.status }}
+            "
+        >
+            {{ ticket.get_status_display }}
+        </span>
+    </div>
+
+    <dl class="event-meta">
+        {% with full_name=ticket.user.get_full_name %}
+            {% if full_name %}
+                <div>
+                    <dt>Attendee</dt>
+                    <dd>{{ full_name }}</dd>
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <div>
+            <dt>Email</dt>
+            <dd>{{ ticket.user.email }}</dd>
+        </div>
+
+        <div>
+            <dt>Ticket ID</dt>
+            <dd class="ticket-id">{{ ticket.pk }}</dd>
+        </div>
+
+        <div>
+            <dt>Event starts</dt>
+            <dd>
+                {{ ticket.category.event.starts_at|date:"j F Y, H:i" }}
+            </dd>
+        </div>
+
+        {% if ticket.checked_in_at %}
+            <div>
+                <dt>Checked in</dt>
+                <dd>
+                    {{ ticket.checked_in_at|date:"j F Y, H:i:s" }}
+                </dd>
+            </div>
+        {% endif %}
+
+        {% if ticket.checked_in_by %}
+            <div>
+                <dt>Checked in by</dt>
+                <dd>{{ ticket.checked_in_by.email }}</dd>
+            </div>
+        {% endif %}
+    </dl>
+
+    {% if can_check_in %}
+        <div class="check-in-notice check-in-notice-ready">
+            Verify the attendee details, then confirm check-in.
+            This ticket can only be used once.
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            <button type="submit">
+                Confirm check-in
+            </button>
+        </form>
+    {% elif ticket.status == "checked_in" %}
+        <div class="check-in-notice check-in-notice-used">
+            This ticket has already been checked in. Do not
+            admit it a second time.
+        </div>
+    {% elif ticket.status == "cancelled" %}
+        <div class="check-in-notice check-in-notice-invalid">
+            This ticket was cancelled and is not valid for entry.
+        </div>
+    {% else %}
+        <div class="check-in-notice check-in-notice-invalid">
+            Check-in is unavailable for this event.
+        </div>
+    {% endif %}
+</section>
+{% endblock %}

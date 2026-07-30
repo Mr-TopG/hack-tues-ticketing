@@ -1,16 +1,18 @@
 from datetime import timedelta
+from unittest.mock import patch
 from uuid import uuid4
 
 from allauth.account.models import EmailAddress
 from django.contrib.auth import get_user_model
-from django.test import Client, TestCase
+from django.contrib.auth.models import Permission
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.accounts.models import OrganizerProfile
 from apps.events.models import Event, TicketCategory
 
 from .models import Ticket
-
 
 User = get_user_model()
 
@@ -98,9 +100,30 @@ class TicketViewTestCase(TestCase):
             values["cancelled_at"] = self.now
         elif status == Ticket.Status.CHECKED_IN:
             values["checked_in_at"] = self.now
+            values["checked_in_by"] = user
 
         values.update(overrides)
         return Ticket.objects.create(**values)
+
+    def approve_organizer(self, *, user, event=None):
+        profile = OrganizerProfile.objects.create(
+            user=user,
+            reason="Ticket check-in test organizer.",
+            status=OrganizerProfile.Status.APPROVED,
+        )
+
+        if event is not None:
+            event.organizer = user
+            event.save(update_fields=["organizer"])
+
+        return profile
+
+    def grant_global_check_in_permission(self, user):
+        permission = Permission.objects.get(
+            content_type__app_label="tickets",
+            codename="check_in_ticket",
+        )
+        user.user_permissions.add(permission)
 
     def category_from_response(self, response, slug):
         categories = response.context[
@@ -787,3 +810,622 @@ class TicketHistoryAccountDeletionTests(TicketViewTestCase):
         )
         self.assertTrue(User.objects.filter(pk=user_pk).exists())
         self.assertTrue(Ticket.objects.filter(pk=ticket.pk).exists())
+
+
+class TicketQrViewTests(TicketViewTestCase):
+    def setUp(self):
+        super().setUp()
+        self.ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+        )
+        self.url = reverse(
+            "tickets:qr",
+            kwargs={"ticket_id": self.ticket.pk},
+        )
+
+    def test_qr_requires_authentication(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response.url.startswith(
+                f"{reverse('account_login')}?next="
+            )
+        )
+
+    @override_settings(APP_BASE_URL="https://tickets.example")
+    @patch(
+        "apps.tickets.views.render_qr_svg",
+        return_value="<svg>generated QR</svg>",
+    )
+    def test_owner_receives_private_svg_with_opaque_check_in_url(
+        self,
+        render_qr_svg,
+    ):
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        check_in_path = reverse(
+            "tickets:check_in",
+            kwargs={
+                "validation_token": self.ticket.validation_token,
+            },
+        )
+        payload = render_qr_svg.call_args.args[0]
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/svg+xml")
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+        self.assertEqual(response["Referrer-Policy"], "strict-origin")
+        self.assertEqual(
+            response["X-Content-Type-Options"],
+            "nosniff",
+        )
+        self.assertEqual(
+            payload,
+            f"https://tickets.example{check_in_path}",
+        )
+        self.assertIn(self.ticket.validation_token, payload)
+        self.assertNotIn(str(self.ticket.pk), payload)
+        self.assertNotIn(self.user.email, payload)
+        self.assertNotIn(self.event.slug, payload)
+        self.assertEqual(
+            response.content,
+            b"<svg>generated QR</svg>",
+        )
+
+    def test_another_user_cannot_fetch_ticket_qr(self):
+        other_user = self.create_user(
+            email="other-qr-user@example.com",
+            verified=True,
+        )
+        self.client.force_login(other_user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_cancelled_and_checked_in_tickets_have_no_qr_endpoint(self):
+        checked_in_by = self.create_user(
+            email="qr-checker@example.com",
+            verified=True,
+        )
+        cancelled = self.create_ticket(
+            user=self.user,
+            category=self.category,
+            status=Ticket.Status.CANCELLED,
+        )
+        checked_in = self.create_ticket(
+            user=self.user,
+            category=self.category,
+            status=Ticket.Status.CHECKED_IN,
+            checked_in_by=checked_in_by,
+        )
+        self.client.force_login(self.user)
+
+        for ticket in (cancelled, checked_in):
+            with self.subTest(status=ticket.status):
+                response = self.client.get(
+                    reverse(
+                        "tickets:qr",
+                        kwargs={"ticket_id": ticket.pk},
+                    )
+                )
+                self.assertEqual(response.status_code, 404)
+
+    def test_qr_rejects_mutating_methods(self):
+        self.client.force_login(self.user)
+
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 405)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status, Ticket.Status.ISSUED)
+
+
+class MyTicketsQrSecurityTests(TicketViewTestCase):
+    def test_only_issued_ticket_has_qr_and_tokens_are_never_rendered(self):
+        checker = self.create_user(
+            email="my-tickets-checker@example.com",
+            verified=True,
+        )
+        issued = self.create_ticket(
+            user=self.user,
+            category=self.category,
+        )
+        cancelled = self.create_ticket(
+            user=self.user,
+            category=self.category,
+            status=Ticket.Status.CANCELLED,
+        )
+        checked_in = self.create_ticket(
+            user=self.user,
+            category=self.category,
+            status=Ticket.Status.CHECKED_IN,
+            checked_in_by=checker,
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("tickets:my_tickets"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(
+            response,
+            reverse(
+                "tickets:qr",
+                kwargs={"ticket_id": issued.pk},
+            ),
+        )
+        for ticket in (cancelled, checked_in):
+            self.assertNotContains(
+                response,
+                reverse(
+                    "tickets:qr",
+                    kwargs={"ticket_id": ticket.pk},
+                ),
+            )
+
+        for ticket in (issued, cancelled, checked_in):
+            self.assertNotContains(
+                response,
+                ticket.validation_token,
+            )
+
+
+class TicketCheckInLookupViewTests(TicketViewTestCase):
+    def test_lookup_requires_authentication(self):
+        response = self.client.get(
+            reverse("tickets:check_in_lookup")
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response.url.startswith(
+                f"{reverse('account_login')}?next="
+            )
+        )
+
+    def test_approved_organizer_can_open_private_lookup(self):
+        organizer = self.create_user(
+            email="lookup-organizer@example.com",
+            verified=True,
+        )
+        self.approve_organizer(user=organizer)
+        self.client.force_login(organizer)
+
+        response = self.client.get(
+            reverse("tickets:check_in_lookup")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTemplateUsed(
+            response,
+            "tickets/check_in_lookup.html",
+        )
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+        self.assertEqual(response["Referrer-Policy"], "strict-origin")
+
+    def test_explicit_permission_allows_lookup(self):
+        checker = self.create_user(
+            email="global-lookup-checker@example.com",
+            verified=True,
+        )
+        self.grant_global_check_in_permission(checker)
+        self.client.force_login(checker)
+
+        response = self.client.get(
+            reverse("tickets:check_in_lookup")
+        )
+
+        self.assertEqual(response.status_code, 200)
+
+    def test_plain_staff_and_ordinary_user_are_forbidden(self):
+        plain_staff = self.create_user(
+            email="plain-staff@example.com",
+            verified=True,
+        )
+        plain_staff.is_staff = True
+        plain_staff.save(update_fields=["is_staff"])
+
+        for user in (plain_staff, self.user):
+            with self.subTest(user=user.email):
+                self.client.force_login(user)
+                response = self.client.get(
+                    reverse("tickets:check_in_lookup")
+                )
+                self.assertEqual(response.status_code, 403)
+                self.client.logout()
+
+    def test_valid_lookup_post_redirects_without_mutating_ticket(self):
+        organizer = self.create_user(
+            email="lookup-owner@example.com",
+            verified=True,
+        )
+        self.approve_organizer(
+            user=organizer,
+            event=self.event,
+        )
+        ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+        )
+        self.client.force_login(organizer)
+
+        response = self.client.post(
+            reverse("tickets:check_in_lookup"),
+            {"validation_token": ticket.validation_token},
+        )
+
+        self.assertRedirects(
+            response,
+            reverse(
+                "tickets:check_in",
+                kwargs={
+                    "validation_token": ticket.validation_token,
+                },
+            ),
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, Ticket.Status.ISSUED)
+        self.assertIsNone(ticket.checked_in_at)
+        self.assertIsNone(ticket.checked_in_by)
+
+    def test_lookup_rejects_unsupported_methods(self):
+        organizer = self.create_user(
+            email="lookup-method-organizer@example.com",
+            verified=True,
+        )
+        self.approve_organizer(user=organizer)
+        self.client.force_login(organizer)
+
+        response = self.client.put(
+            reverse("tickets:check_in_lookup")
+        )
+
+        self.assertEqual(response.status_code, 405)
+
+
+class TicketCheckInViewTests(TicketViewTestCase):
+    def setUp(self):
+        super().setUp()
+        self.organizer = self.create_user(
+            email="check-in-organizer@example.com",
+            verified=True,
+        )
+        self.approve_organizer(
+            user=self.organizer,
+            event=self.event,
+        )
+        self.ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+        )
+        self.url = self.check_in_url(self.ticket)
+
+    def check_in_url(self, ticket):
+        return reverse(
+            "tickets:check_in",
+            kwargs={
+                "validation_token": ticket.validation_token,
+            },
+        )
+
+    def test_confirmation_requires_authentication(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            response.url.startswith(
+                f"{reverse('account_login')}?next="
+            )
+        )
+
+    def test_get_and_head_show_confirmation_without_mutating(self):
+        self.client.force_login(self.organizer)
+
+        get_response = self.client.get(self.url)
+        head_response = self.client.head(self.url)
+
+        self.assertEqual(get_response.status_code, 200)
+        self.assertTemplateUsed(
+            get_response,
+            "tickets/check_in_confirm.html",
+        )
+        self.assertContains(get_response, self.user.email)
+        self.assertContains(get_response, "Confirm check-in")
+        self.assertEqual(head_response.status_code, 200)
+
+        for response in (get_response, head_response):
+            self.assertEqual(
+                response["Cache-Control"],
+                "private, no-store",
+            )
+            self.assertEqual(
+                response["Referrer-Policy"],
+                "strict-origin",
+            )
+
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status, Ticket.Status.ISSUED)
+        self.assertIsNone(self.ticket.checked_in_at)
+        self.assertIsNone(self.ticket.checked_in_by)
+
+    def test_approved_owner_post_checks_in_and_uses_prg(self):
+        self.client.force_login(self.organizer)
+
+        response = self.client.post(self.url)
+
+        self.assertRedirects(
+            response,
+            self.url,
+            fetch_redirect_response=False,
+        )
+        self.assertEqual(response["Cache-Control"], "private, no-store")
+
+        self.ticket.refresh_from_db()
+        self.assertEqual(
+            self.ticket.status,
+            Ticket.Status.CHECKED_IN,
+        )
+        self.assertIsNotNone(self.ticket.checked_in_at)
+        self.assertEqual(
+            self.ticket.checked_in_by,
+            self.organizer,
+        )
+
+    def test_explicit_permission_can_check_in_any_event(self):
+        checker = self.create_user(
+            email="global-checker@example.com",
+            verified=True,
+        )
+        self.grant_global_check_in_permission(checker)
+        self.client.force_login(checker)
+
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 302)
+        self.ticket.refresh_from_db()
+        self.assertEqual(
+            self.ticket.status,
+            Ticket.Status.CHECKED_IN,
+        )
+        self.assertEqual(self.ticket.checked_in_by, checker)
+
+    def test_foreign_organizer_and_plain_staff_receive_not_found(self):
+        foreign_organizer = self.create_user(
+            email="foreign-organizer@example.com",
+            verified=True,
+        )
+        self.approve_organizer(user=foreign_organizer)
+        plain_staff = self.create_user(
+            email="foreign-plain-staff@example.com",
+            verified=True,
+        )
+        plain_staff.is_staff = True
+        plain_staff.save(update_fields=["is_staff"])
+
+        for user in (foreign_organizer, plain_staff):
+            with self.subTest(user=user.email):
+                self.client.force_login(user)
+                for method in ("get", "post"):
+                    with self.subTest(method=method):
+                        response = getattr(
+                            self.client,
+                            method,
+                        )(self.url)
+                        self.assertEqual(response.status_code, 404)
+                self.client.logout()
+
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status, Ticket.Status.ISSUED)
+
+    def test_known_foreign_and_unknown_tokens_are_indistinguishable(self):
+        foreign_organizer = self.create_user(
+            email="foreign-token-organizer@example.com",
+            verified=True,
+        )
+        foreign_event = self.create_event(
+            name="Foreign Check-in Event",
+            slug="foreign-check-in-event",
+            organizer=foreign_organizer,
+        )
+        foreign_category = self.create_category(
+            event=foreign_event,
+            name="Foreign attendee",
+            slug="foreign-attendee",
+        )
+        foreign_ticket = self.create_ticket(
+            user=self.user,
+            category=foreign_category,
+        )
+        self.client.force_login(self.organizer)
+
+        known_foreign_response = self.client.get(
+            self.check_in_url(foreign_ticket)
+        )
+        unknown_response = self.client.get(
+            reverse(
+                "tickets:check_in",
+                kwargs={"validation_token": "A" * 43},
+            )
+        )
+
+        self.assertEqual(known_foreign_response.status_code, 404)
+        self.assertEqual(unknown_response.status_code, 404)
+
+    def test_replay_is_rejected_and_preserves_original_audit_data(self):
+        self.client.force_login(self.organizer)
+        first_response = self.client.post(self.url)
+        self.assertEqual(first_response.status_code, 302)
+
+        self.ticket.refresh_from_db()
+        original_checked_in_at = self.ticket.checked_in_at
+        original_checked_in_by_id = self.ticket.checked_in_by_id
+
+        response = self.client.post(self.url, follow=True)
+
+        self.assertEqual(
+            response.redirect_chain,
+            [(self.url, 302)],
+        )
+        self.assertContains(
+            response,
+            "This ticket has already been checked in.",
+        )
+
+        self.ticket.refresh_from_db()
+        self.assertEqual(
+            self.ticket.checked_in_at,
+            original_checked_in_at,
+        )
+        self.assertEqual(
+            self.ticket.checked_in_by_id,
+            original_checked_in_by_id,
+        )
+
+    def test_cancelled_ticket_is_rejected_without_changing_audit_data(self):
+        cancelled_at = self.now - timedelta(hours=1)
+        ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+            status=Ticket.Status.CANCELLED,
+            cancelled_at=cancelled_at,
+        )
+        url = self.check_in_url(ticket)
+        self.client.force_login(self.organizer)
+
+        get_response = self.client.get(url)
+        self.assertEqual(get_response.status_code, 200)
+        self.assertContains(
+            get_response,
+            "This ticket was cancelled and is not valid for entry.",
+        )
+        self.assertNotContains(get_response, "Confirm check-in")
+
+        response = self.client.post(url, follow=True)
+        self.assertEqual(
+            response.redirect_chain,
+            [(url, 302)],
+        )
+        self.assertContains(
+            response,
+            "A cancelled ticket cannot be checked in.",
+        )
+
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, Ticket.Status.CANCELLED)
+        self.assertEqual(ticket.cancelled_at, cancelled_at)
+        self.assertIsNone(ticket.checked_in_at)
+        self.assertIsNone(ticket.checked_in_by)
+
+    def test_invalid_and_malformed_tokens_return_not_found(self):
+        self.client.force_login(self.organizer)
+
+        unknown_response = self.client.get(
+            reverse(
+                "tickets:check_in",
+                kwargs={"validation_token": "Z" * 43},
+            )
+        )
+        malformed_response = self.client.get(
+            "/tickets/check-in/v1/not-a-valid-token/"
+        )
+
+        self.assertEqual(unknown_response.status_code, 404)
+        self.assertEqual(malformed_response.status_code, 404)
+
+    def test_check_in_rejects_unsupported_methods(self):
+        self.client.force_login(self.organizer)
+
+        response = self.client.put(self.url)
+
+        self.assertEqual(response.status_code, 405)
+        self.ticket.refresh_from_db()
+        self.assertEqual(self.ticket.status, Ticket.Status.ISSUED)
+
+
+class TicketCheckInCsrfTests(TicketViewTestCase):
+    def test_check_in_posts_require_csrf_tokens(self):
+        organizer = self.create_user(
+            email="csrf-check-in-organizer@example.com",
+            verified=True,
+        )
+        self.approve_organizer(
+            user=organizer,
+            event=self.event,
+        )
+        ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+        )
+        check_in_url = reverse(
+            "tickets:check_in",
+            kwargs={
+                "validation_token": ticket.validation_token,
+            },
+        )
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(organizer)
+
+        lookup_response = csrf_client.post(
+            reverse("tickets:check_in_lookup"),
+            {"validation_token": ticket.validation_token},
+        )
+        check_in_response = csrf_client.post(check_in_url)
+
+        self.assertEqual(lookup_response.status_code, 403)
+        self.assertEqual(check_in_response.status_code, 403)
+
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, Ticket.Status.ISSUED)
+        self.assertIsNone(ticket.checked_in_at)
+        self.assertIsNone(ticket.checked_in_by)
+
+    def test_same_origin_csrf_post_succeeds_from_confirmation_page(self):
+        organizer = self.create_user(
+            email="valid-csrf-check-in-organizer@example.com",
+            verified=True,
+        )
+        self.approve_organizer(
+            user=organizer,
+            event=self.event,
+        )
+        ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+        )
+        check_in_url = reverse(
+            "tickets:check_in",
+            kwargs={
+                "validation_token": ticket.validation_token,
+            },
+        )
+        csrf_client = Client(enforce_csrf_checks=True)
+        csrf_client.force_login(organizer)
+
+        confirmation_response = csrf_client.get(check_in_url)
+        csrf_token = csrf_client.cookies["csrftoken"].value
+
+        self.assertEqual(confirmation_response.status_code, 200)
+        self.assertEqual(
+            confirmation_response["Referrer-Policy"],
+            "strict-origin",
+        )
+
+        response = csrf_client.post(
+            check_in_url,
+            {
+                "csrfmiddlewaretoken": csrf_token,
+            },
+            HTTP_ORIGIN="http://testserver",
+        )
+
+        self.assertEqual(response.status_code, 302)
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.status, Ticket.Status.CHECKED_IN)
+        self.assertEqual(ticket.checked_in_by, organizer)

@@ -98,6 +98,22 @@ Free ticket registration is implemented with:
 PostgreSQL is the authoritative inventory source. Redis is not used as a
 ticket counter.
 
+## Ticket validation and check-in
+
+Issued tickets include a separate 256-bit validation token and an
+owner-only QR code. The QR contains only the configured application URL
+and opaque token—never attendee or event details.
+
+Check-in uses an authenticated confirmation page and a CSRF-protected
+POST. Approved organizers can check in tickets for their own events.
+Users with the explicit `tickets.check_in_ticket` permission can check
+in tickets across events. PostgreSQL row locks make the transition
+one-time and serialize it safely against cancellation and duplicate
+scans.
+
+Production access logs must redact token-bearing
+`/tickets/check-in/` paths.
+
 ## Repository structure
 
 ```text
@@ -198,9 +214,10 @@ The system will use:
 
 ## Status
 
-Development milestone: atomic free-ticket registration is implemented.
-Production serving, real outbound email, QR check-in, PDF generation,
-background workers, monitoring, and payments are not yet implemented.
+Development milestone: atomic free-ticket registration and secure QR
+check-in are implemented. Production serving, real outbound email, PDF
+generation, background workers, monitoring, and payments are not yet
+implemented.
 
 ## License
 

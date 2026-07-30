@@ -1,7 +1,6 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from . import views
-
 
 app_name = "tickets"
 
@@ -21,5 +20,23 @@ urlpatterns = [
         "account/tickets/<uuid:ticket_id>/cancel/",
         views.cancel_ticket,
         name="cancel",
+    ),
+    path(
+        "account/tickets/<uuid:ticket_id>/qr.svg",
+        views.ticket_qr,
+        name="qr",
+    ),
+    path(
+        "check-in/",
+        views.check_in_lookup,
+        name="check_in_lookup",
+    ),
+    re_path(
+        (
+            r"^tickets/check-in/v1/"
+            r"(?P<validation_token>[A-Za-z0-9_-]{43})/$"
+        ),
+        views.check_in_ticket,
+        name="check_in",
     ),
 ]
