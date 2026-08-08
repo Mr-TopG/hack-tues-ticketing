@@ -59,6 +59,12 @@ class Ticket(models.Model):
         db_index=True,
     )
 
+    display_name = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+    )
+
     issued_at = models.DateTimeField(auto_now_add=True)
     cancelled_at = models.DateTimeField(
         null=True,

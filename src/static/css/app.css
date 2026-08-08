@@ -794,6 +794,7 @@ legend {
 .status-open,
 .status-issued,
 .status-published,
+.status-approved,
 .badge-verified {
     background: var(--success-soft);
     color: var(--success);
@@ -849,8 +850,7 @@ legend {
 
 .ticket-category-list,
 .my-ticket-list,
-.management-event-list,
-.account-grid {
+.management-event-list {
     display: grid;
     gap: 16px;
 }
@@ -949,22 +949,241 @@ legend {
     border-top: 1px solid var(--line);
 }
 
+.ticket-name-form {
+    margin: -8px -8px 24px;
+    padding: 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    background: var(--surface-subtle);
+}
+
+.ticket-name-form label {
+    margin-bottom: 8px;
+}
+
+.ticket-name-controls {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: 10px;
+}
+
+.ticket-name-controls input {
+    margin: 0;
+}
+
+.ticket-name-form small {
+    display: block;
+    margin-top: 8px;
+    color: var(--ink-faint);
+    font-size: 0.8rem;
+}
+
 .management-actions form {
     margin: 0;
 }
 
-.account-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
+.account-overview {
+    display: flex;
+    max-width: none;
+    margin-bottom: 18px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
 }
 
-.account-grid > .card {
+.account-identity {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 20px;
+}
+
+.account-avatar {
+    display: grid;
+    width: 68px;
+    height: 68px;
+    border: 1px solid var(--line-strong);
+    border-radius: 20px;
+    flex: 0 0 auto;
+    place-items: center;
+    background: var(--accent-soft);
+    color: var(--accent);
+}
+
+.account-avatar svg {
+    width: 34px;
+    height: 34px;
+    fill: none;
+    stroke: currentcolor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+
+.account-overview .eyebrow,
+.account-overview h1 {
+    margin-bottom: 6px;
+}
+
+.account-overview h1 {
+    font-size: clamp(1.7rem, 4vw, 2.35rem);
+}
+
+.account-email {
+    margin-bottom: 12px;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+}
+
+.account-statuses,
+.account-overview-actions,
+.connected-account-list {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.account-overview-actions {
+    flex: 0 0 auto;
+}
+
+.account-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(250px, 310px);
+    align-items: start;
+    gap: 18px;
+}
+
+.account-main,
+.account-sidebar {
+    display: grid;
+    gap: 18px;
+}
+
+.account-main > .card,
+.account-sidebar > .card,
+.account-danger-zone {
     max-width: none;
 }
 
-.account-grid > .card:nth-child(3),
-.account-grid > .danger-card {
-    grid-column: 1 / -1;
+.account-section,
+.organizer-account-card,
+.account-nav {
+    scroll-margin-top: 24px;
+}
+
+.account-section-heading {
+    display: flex;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.account-section-heading .eyebrow,
+.account-section-heading h2 {
+    margin-bottom: 6px;
+}
+
+.account-section-heading > p {
+    max-width: 330px;
+    margin: 2px 0 0;
+    font-size: 0.9rem;
+}
+
+.account-profile-form {
+    margin-top: 24px;
+}
+
+.account-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.account-settings-list {
+    display: grid;
+}
+
+.account-setting-row {
+    display: flex;
+    padding: 22px 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.account-setting-row + .account-setting-row {
+    border-top: 1px solid var(--line);
+}
+
+.account-setting-row h3,
+.account-setting-row p {
+    margin-bottom: 5px;
+}
+
+.account-setting-row > .button {
+    flex: 0 0 auto;
+}
+
+.account-nav {
+    padding: 22px;
+}
+
+.account-nav .eyebrow {
+    margin-bottom: 10px;
+}
+
+.account-nav a {
+    display: block;
+    padding: 9px 10px;
+    border-radius: var(--radius-sm);
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.account-nav a:hover {
+    background: var(--surface-subtle);
+    color: var(--ink);
+}
+
+.organizer-account-card .eyebrow,
+.organizer-account-card h2 {
+    margin-bottom: 8px;
+}
+
+.organizer-account-card .status-badge {
+    margin-bottom: 16px;
+}
+
+.organizer-account-card .button {
+    width: 100%;
+}
+
+.account-danger-zone {
+    display: flex;
+    margin-top: 18px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+}
+
+.account-danger-zone .eyebrow,
+.account-danger-zone h2 {
+    margin-bottom: 6px;
+}
+
+.account-danger-zone > div {
+    max-width: 720px;
+}
+
+.account-danger-zone > .button {
+    flex: 0 0 auto;
 }
 
 .email-list {
@@ -1004,6 +1223,12 @@ legend {
 
 .email-actions input[type="hidden"] {
     display: none;
+}
+
+.email-primary-note {
+    color: var(--ink-faint);
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
 .danger-card,
@@ -1383,6 +1608,7 @@ span.flatpickr-weekday,
 [data-theme="dark"] .status-open,
 [data-theme="dark"] .status-issued,
 [data-theme="dark"] .status-published,
+[data-theme="dark"] .status-approved,
 [data-theme="dark"] .badge-verified {
     background: #123126;
     color: #86efac;
@@ -1446,13 +1672,12 @@ span.flatpickr-weekday,
     }
 
     .home-benefits,
-    .account-grid {
+    .account-layout {
         grid-template-columns: 1fr;
     }
 
-    .account-grid > .card:nth-child(3),
-    .account-grid > .danger-card {
-        grid-column: auto;
+    .account-sidebar {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .ticket-qr {
@@ -1589,6 +1814,26 @@ span.flatpickr-weekday,
         flex-direction: column;
     }
 
+    .account-overview,
+    .account-section-heading,
+    .account-setting-row,
+    .account-danger-zone {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .account-overview-actions,
+    .account-overview-actions .button,
+    .account-setting-row > .button,
+    .account-danger-zone > .button {
+        width: 100%;
+    }
+
+    .account-form-grid,
+    .account-sidebar {
+        grid-template-columns: 1fr;
+    }
+
     .ticket-category {
         grid-template-columns: 1fr;
     }
@@ -1600,6 +1845,14 @@ span.flatpickr-weekday,
     .ticket-action .button,
     .ticket-action button,
     .ticket-action form {
+        width: 100%;
+    }
+
+    .ticket-name-controls {
+        grid-template-columns: 1fr;
+    }
+
+    .ticket-name-controls button {
         width: 100%;
     }
 

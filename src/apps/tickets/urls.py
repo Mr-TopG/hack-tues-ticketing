@@ -17,6 +17,11 @@ urlpatterns = [
         name="my_tickets",
     ),
     path(
+        "account/tickets/<uuid:ticket_id>/name/",
+        views.update_ticket_name,
+        name="update_name",
+    ),
+    path(
         "account/ticket-requests/<uuid:public_id>/",
         views.ticket_request_detail,
         name="request_detail",

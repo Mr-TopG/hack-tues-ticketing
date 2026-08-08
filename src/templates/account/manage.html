@@ -3,316 +3,373 @@
 {% block title %}Account | Hack TUES Tickets{% endblock %}
 
 {% block content %}
-<section class="page-heading">
-    <div>
-        <p class="eyebrow">Your account</p>
-        <h1>Account settings</h1>
+<section class="account-overview card">
+    <div class="account-identity">
+        <span class="account-avatar" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+                <circle cx="12" cy="8" r="4"></circle>
+                <path d="M4.5 21a7.5 7.5 0 0 1 15 0"></path>
+            </svg>
+        </span>
 
-        <p class="muted">
-            Manage your profile, sign-in methods, and organizer access.
-        </p>
+        <div>
+            <p class="eyebrow">Your account</p>
+            <h1>
+                {% if user.get_full_name %}
+                    {{ user.get_full_name }}
+                {% else %}
+                    Account settings
+                {% endif %}
+            </h1>
+            <p class="account-email">{{ user.email }}</p>
+
+            <div class="account-statuses" aria-label="Account status">
+                {% if email_verified %}
+                    <span class="badge badge-verified">
+                        Email verified
+                    </span>
+                {% else %}
+                    <span class="badge badge-unverified">
+                        Email not verified
+                    </span>
+                {% endif %}
+
+                {% if has_usable_password %}
+                    <span class="badge">Password enabled</span>
+                {% else %}
+                    <span class="badge">Social sign-in</span>
+                {% endif %}
+
+                {% if organizer_profile.status == "approved" %}
+                    <span class="badge badge-primary">Organizer</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="account-overview-actions">
+        <a class="button" href="{% url 'tickets:my_tickets' %}">
+            My tickets
+        </a>
+        <a class="button button-secondary" href="{% url 'events:list' %}">
+            Browse events
+        </a>
     </div>
 </section>
 
-<div class="account-grid">
-    <section class="card">
-        <h2>My tickets</h2>
+<div class="account-layout">
+    <div class="account-main">
+        <section class="card account-section" id="profile">
+            <div class="account-section-heading">
+                <div>
+                    <p class="eyebrow">Personal details</p>
+                    <h2>Profile</h2>
+                </div>
+                <p class="muted">
+                    This name appears on tickets issued to you.
+                </p>
+            </div>
 
-        <p class="muted">
-            View your ticket history and cancel eligible tickets.
-        </p>
+            <form method="post" class="account-profile-form">
+                {% csrf_token %}
+                {{ form.non_field_errors }}
 
-        <a
-            class="button"
-            href="{% url 'tickets:my_tickets' %}"
-        >
-            View my tickets
-        </a>
-    </section>
-
-    <section class="card">
-        <h2>Account management</h2>
-
-        <p class="muted">
-            Update the personal information used when issuing
-            your tickets.
-        </p>
-
-        <form method="post">
-            {% csrf_token %}
-
-            {{ form.as_p }}
-
-            <button type="submit">
-                Save profile
-            </button>
-        </form>
-    </section>
-
-    <section class="card">
-        <h2>Email addresses</h2>
-
-        <p class="muted">
-            Your primary email is used to log in and cannot be
-            deleted until another email is verified and made primary.
-        </p>
-
-        <div class="email-list">
-            {% for email_address in email_addresses %}
-                <div class="email-row">
-                    <div class="email-details">
-                        <strong>{{ email_address.email }}</strong>
-
-                        <div class="email-badges">
-                            {% if email_address.primary %}
-                                <span class="badge badge-primary">
-                                    Primary
-                                </span>
-                            {% endif %}
-
-                            {% if email_address.verified %}
-                                <span class="badge badge-verified">
-                                    Verified
-                                </span>
-                            {% else %}
-                                <span class="badge badge-unverified">
-                                    Not verified
-                                </span>
-                            {% endif %}
-                        </div>
+                <div class="account-form-grid">
+                    <div class="field-group">
+                        {{ form.first_name.label_tag }}
+                        {{ form.first_name.errors }}
+                        {{ form.first_name }}
                     </div>
 
-                    <div class="email-actions">
-                        {% if not email_address.verified %}
-                            <form
-                                method="post"
-                                action="{% url 'account_email' %}"
-                            >
-                                {% csrf_token %}
+                    <div class="field-group">
+                        {{ form.last_name.label_tag }}
+                        {{ form.last_name.errors }}
+                        {{ form.last_name }}
+                    </div>
+                </div>
 
-                                <input
-                                    type="hidden"
-                                    name="email"
-                                    value="{{ email_address.email }}"
-                                >
+                <button type="submit">Save profile</button>
+            </form>
+        </section>
 
-                                <button
-                                    type="submit"
-                                    name="action_send"
-                                    value="1"
-                                >
-                                    Resend verification
-                                </button>
-                            </form>
-                        {% endif %}
+        <section class="card account-section" id="emails">
+            <div class="account-section-heading">
+                <div>
+                    <p class="eyebrow">Identity</p>
+                    <h2>Email &amp; verification</h2>
+                </div>
+                <p class="muted">
+                    A verified primary email is required to receive tickets.
+                </p>
+            </div>
 
-                        {% if not email_address.primary %}
-                            {% if email_address.verified %}
+            <div class="email-list">
+                {% for email_address in email_addresses %}
+                    <div class="email-row">
+                        <div class="email-details">
+                            <strong>{{ email_address.email }}</strong>
+
+                            <div class="email-badges">
+                                {% if email_address.primary %}
+                                    <span class="badge badge-primary">
+                                        Primary
+                                    </span>
+                                {% endif %}
+
+                                {% if email_address.verified %}
+                                    <span class="badge badge-verified">
+                                        Verified
+                                    </span>
+                                {% else %}
+                                    <span class="badge badge-unverified">
+                                        Not verified
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="email-actions">
+                            {% if not email_address.verified %}
                                 <form
                                     method="post"
                                     action="{% url 'account_email' %}"
                                 >
                                     {% csrf_token %}
-
                                     <input
                                         type="hidden"
                                         name="email"
                                         value="{{ email_address.email }}"
                                     >
-
                                     <button
                                         type="submit"
-                                        name="action_primary"
+                                        name="action_send"
                                         value="1"
                                     >
-                                        Make primary
+                                        Resend verification
                                     </button>
                                 </form>
                             {% endif %}
 
-                            <form
-                                method="post"
-                                action="{% url 'account_email' %}"
-                                onsubmit="
-                                    return confirm(
-                                        'Delete {{ email_address.email|escapejs }}?'
-                                    );
-                                "
-                            >
-                                {% csrf_token %}
+                            {% if not email_address.primary %}
+                                {% if email_address.verified %}
+                                    <form
+                                        method="post"
+                                        action="{% url 'account_email' %}"
+                                    >
+                                        {% csrf_token %}
+                                        <input
+                                            type="hidden"
+                                            name="email"
+                                            value="{{ email_address.email }}"
+                                        >
+                                        <button
+                                            class="button-secondary"
+                                            type="submit"
+                                            name="action_primary"
+                                            value="1"
+                                        >
+                                            Make primary
+                                        </button>
+                                    </form>
+                                {% endif %}
 
-                                <input
-                                    type="hidden"
-                                    name="email"
-                                    value="{{ email_address.email }}"
+                                <form
+                                    method="post"
+                                    action="{% url 'account_email' %}"
+                                    onsubmit="
+                                        return confirm(
+                                            'Delete {{ email_address.email|escapejs }}?'
+                                        );
+                                    "
                                 >
-
-                                <button
-                                    class="button-danger"
-                                    type="submit"
-                                    name="action_remove"
-                                    value="1"
-                                >
-                                    Delete email
-                                </button>
-                            </form>
-                        {% else %}
-                            <span class="muted">
-                                Primary login email
-                            </span>
-                        {% endif %}
+                                    {% csrf_token %}
+                                    <input
+                                        type="hidden"
+                                        name="email"
+                                        value="{{ email_address.email }}"
+                                    >
+                                    <button
+                                        class="button-danger"
+                                        type="submit"
+                                        name="action_remove"
+                                        value="1"
+                                    >
+                                        Delete
+                                    </button>
+                                </form>
+                            {% else %}
+                                <span class="email-primary-note">
+                                    Login email
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
-                </div>
-            {% empty %}
-                <p>No email addresses are associated with this account.</p>
-            {% endfor %}
-        </div>
-
-        <p>
-            <a
-                class="button"
-                href="{% url 'account_email' %}"
-            >
-                Add or manage email addresses
-            </a>
-        </p>
-    </section>
-
-    <section class="card">
-        <h2>Password</h2>
-
-        {% if has_usable_password %}
-            <p class="muted">
-                Change the password used for email login.
-            </p>
-
-            <a
-                class="button"
-                href="{% url 'account_change_password' %}"
-            >
-                Change password
-            </a>
-        {% else %}
-            <p class="muted">
-                This account currently uses social login and
-                does not have a password.
-            </p>
-
-            <a
-                class="button"
-                href="{% url 'account_set_password' %}"
-            >
-                Set password
-            </a>
-        {% endif %}
-    </section>
-
-    <section class="card">
-        <h2>Connected accounts</h2>
-
-        {% if social_accounts %}
-            <ul>
-                {% for social_account in social_accounts %}
-                    <li>
-                        {{ social_account.provider|title }}
-                    </li>
+                {% empty %}
+                    <p>No email addresses are associated with this account.</p>
                 {% endfor %}
-            </ul>
-        {% else %}
-            <p class="muted">
-                No social accounts are connected yet.
-            </p>
-        {% endif %}
-
-        <a
-            class="button"
-            href="{% url 'socialaccount_connections' %}"
-        >
-            Manage connected accounts
-        </a>
-    </section>
-
-    <section class="card">
-        <h2>Organizer access</h2>
-
-        {% if organizer_profile.status == "approved" %}
-            <p>
-                <strong>Organizer account approved</strong>
-            </p>
-
-            <p class="muted">
-                You can create and manage events.
-            </p>
-
-            <a
-                class="button"
-                href="{% url 'events_manage:list' %}"
-            >
-                Manage events
-            </a>
-        {% elif organizer_profile.status == "pending" %}
-            <p>
-                <strong>Organizer request pending</strong>
-            </p>
-
-            <p class="muted">
-                An administrator must review your request.
-            </p>
+            </div>
 
             <a
                 class="button button-secondary"
-                href="{% url 'accounts:organizer_request' %}"
+                href="{% url 'account_email' %}"
             >
-                View request
+                Manage email addresses
             </a>
-        {% elif organizer_profile.status == "rejected" %}
-            <p>
-                <strong>Organizer request rejected</strong>
-            </p>
+        </section>
 
-            <a
-                class="button"
-                href="{% url 'accounts:organizer_request' %}"
-            >
-                Submit a new request
-            </a>
-        {% else %}
-            <p class="muted">
-                Request approval to create and manage events.
-            </p>
+        <section class="card account-section" id="sign-in">
+            <div class="account-section-heading">
+                <div>
+                    <p class="eyebrow">Security</p>
+                    <h2>Sign-in methods</h2>
+                </div>
+                <p class="muted">
+                    Control how you access this account.
+                </p>
+            </div>
 
-            <a
-                class="button"
-                href="{% url 'accounts:organizer_request' %}"
-            >
-                Request organizer access
-            </a>
-        {% endif %}
-    </section>
+            <div class="account-settings-list">
+                <div class="account-setting-row">
+                    <div>
+                        <h3>Password</h3>
+                        {% if has_usable_password %}
+                            <p class="muted">
+                                Email and password sign-in is enabled.
+                            </p>
+                        {% else %}
+                            <p class="muted">
+                                No password is set for this account.
+                            </p>
+                        {% endif %}
+                    </div>
 
-    <section class="card danger-card">
+                    {% if has_usable_password %}
+                        <a
+                            class="button button-secondary"
+                            href="{% url 'account_change_password' %}"
+                        >
+                            Change password
+                        </a>
+                    {% else %}
+                        <a
+                            class="button button-secondary"
+                            href="{% url 'account_set_password' %}"
+                        >
+                            Set password
+                        </a>
+                    {% endif %}
+                </div>
+
+                <div class="account-setting-row">
+                    <div>
+                        <h3>Connected accounts</h3>
+                        {% if social_accounts %}
+                            <div class="connected-account-list">
+                                {% for social_account in social_accounts %}
+                                    <span class="badge">
+                                        {{ social_account.provider|title }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="muted">
+                                No social accounts are connected.
+                            </p>
+                        {% endif %}
+                    </div>
+
+                    <a
+                        class="button button-secondary"
+                        href="{% url 'socialaccount_connections' %}"
+                    >
+                        Manage connections
+                    </a>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <aside class="account-sidebar" aria-label="Account tools">
+        <nav
+            class="card account-nav"
+            aria-label="Account settings sections"
+        >
+            <p class="eyebrow">On this page</p>
+            <a href="#profile">Profile</a>
+            <a href="#emails">Email &amp; verification</a>
+            <a href="#sign-in">Sign-in methods</a>
+            <a href="#organizer">Organizer access</a>
+            <a href="#danger-zone">Danger zone</a>
+        </nav>
+
+        <section class="card organizer-account-card" id="organizer">
+            <p class="eyebrow">Event tools</p>
+            <h2>Organizer access</h2>
+
+            {% if organizer_profile.status == "approved" %}
+                <span class="status-badge status-approved">Approved</span>
+                <p class="muted">
+                    You can create, publish, and manage your events.
+                </p>
+                <a class="button" href="{% url 'events_manage:list' %}">
+                    Manage events
+                </a>
+            {% elif organizer_profile.status == "pending" %}
+                <span class="status-badge status-pending">Pending review</span>
+                <p class="muted">
+                    An administrator needs to review your request.
+                </p>
+                <a
+                    class="button button-secondary"
+                    href="{% url 'accounts:organizer_request' %}"
+                >
+                    View request
+                </a>
+            {% elif organizer_profile.status == "rejected" %}
+                <span class="status-badge status-rejected">Not approved</span>
+                <p class="muted">
+                    You can update your information and apply again.
+                </p>
+                <a class="button" href="{% url 'accounts:organizer_request' %}">
+                    Apply again
+                </a>
+            {% else %}
+                <p class="muted">
+                    Request approval to create and manage events.
+                </p>
+                <a class="button" href="{% url 'accounts:organizer_request' %}">
+                    Request access
+                </a>
+            {% endif %}
+        </section>
+    </aside>
+</div>
+
+<section class="card danger-card account-danger-zone" id="danger-zone">
+    <div>
+        <p class="eyebrow">Danger zone</p>
         <h2>Delete account</h2>
 
         {% if has_ticket_history %}
             <p class="muted">
-                This account has ticket history and cannot be
-                permanently deleted. This protects event and
-                attendance records.
+                This account has ticket history and cannot be permanently
+                deleted. This protects event and attendance records.
             </p>
         {% else %}
             <p class="muted">
-                Permanently delete your profile, email addresses
-                and connected accounts.
+                Permanently remove your profile, email addresses, and
+                connected accounts. This action cannot be undone.
             </p>
-
-            <a
-                class="button button-danger"
-                href="{% url 'accounts:delete' %}"
-            >
-                Delete account
-            </a>
         {% endif %}
-    </section>
+    </div>
 
-</div>
+    {% if not has_ticket_history %}
+        <a
+            class="button button-danger"
+            href="{% url 'accounts:delete' %}"
+        >
+            Delete account
+        </a>
+    {% endif %}
+</section>
 {% endblock %}

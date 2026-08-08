@@ -635,6 +635,109 @@ class MyTicketsViewTests(TicketViewTestCase):
                 ),
             )
 
+    def test_ticket_name_editor_is_shown_for_each_owned_ticket(self):
+        ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+            display_name="School hackathon",
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.get(reverse("tickets:my_tickets"))
+
+        self.assertContains(response, "Ticket name")
+        self.assertContains(response, 'value="School hackathon"')
+        self.assertContains(
+            response,
+            reverse(
+                "tickets:update_name",
+                kwargs={"ticket_id": ticket.pk},
+            ),
+        )
+
+    def test_owner_can_update_and_clear_ticket_name(self):
+        ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+        )
+        url = reverse(
+            "tickets:update_name",
+            kwargs={"ticket_id": ticket.pk},
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            url,
+            {"display_name": "  Alex   event   ticket  "},
+            follow=True,
+        )
+
+        self.assertRedirects(response, reverse("tickets:my_tickets"))
+        self.assertContains(response, "Ticket name updated.")
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.display_name, "Alex event ticket")
+
+        response = self.client.post(
+            url,
+            {"display_name": ""},
+            follow=True,
+        )
+
+        self.assertContains(response, "Ticket name removed.")
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.display_name, "")
+
+    def test_ticket_name_update_is_owner_only_and_post_only(self):
+        other_user = self.create_user(
+            email="ticket-name-owner@example.com",
+            verified=True,
+        )
+        ticket = self.create_ticket(
+            user=other_user,
+            category=self.category,
+        )
+        url = reverse(
+            "tickets:update_name",
+            kwargs={"ticket_id": ticket.pk},
+        )
+        self.client.force_login(self.user)
+
+        self.assertEqual(self.client.get(url).status_code, 405)
+        self.assertEqual(
+            self.client.post(
+                url,
+                {"display_name": "Stolen name"},
+            ).status_code,
+            404,
+        )
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.display_name, "")
+
+    def test_oversized_ticket_name_is_rejected_without_writing(self):
+        ticket = self.create_ticket(
+            user=self.user,
+            category=self.category,
+            display_name="Original",
+        )
+        url = reverse(
+            "tickets:update_name",
+            kwargs={"ticket_id": ticket.pk},
+        )
+        self.client.force_login(self.user)
+
+        response = self.client.post(
+            url,
+            {"display_name": "x" * 10_000},
+            follow=True,
+        )
+
+        self.assertContains(
+            response,
+            "Ticket names must be 80 characters or fewer.",
+        )
+        ticket.refresh_from_db()
+        self.assertEqual(ticket.display_name, "Original")
+
 
 class CancelTicketViewTests(TicketViewTestCase):
     def test_cancel_requires_authentication(self):

@@ -237,6 +237,30 @@ class AccountManagementTests(TestCase):
             "Resend verification",
         )
 
+    def test_account_page_groups_settings_by_responsibility(self):
+        response = self.client.get(
+            reverse("accounts:manage")
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, 'class="account-overview card"')
+        self.assertContains(response, "Profile")
+        self.assertContains(response, "Email &amp; verification")
+        self.assertContains(response, "Sign-in methods")
+        self.assertContains(response, "Organizer access")
+        self.assertContains(response, "Danger zone")
+        self.assertContains(response, "My tickets")
+
+    def test_account_overview_displays_identity_and_status(self):
+        response = self.client.get(
+            reverse("accounts:manage")
+        )
+
+        self.assertContains(response, "Old Name")
+        self.assertContains(response, self.user.email)
+        self.assertContains(response, "Email not verified")
+        self.assertContains(response, "Password enabled")
+
     def test_resend_button_sends_confirmation_email(self):
         response = self.client.post(
             reverse("account_email"),

@@ -9,6 +9,7 @@ from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils import timezone
 
+from .filenames import ticket_download_filename
 from .models import TicketEmailDelivery
 from .pdf_service import (
     TicketPdfError,
@@ -225,7 +226,7 @@ def _build_message(delivery, pdf_bytes):
         "text/html",
     )
     message.attach(
-        f"ticket-{ticket.pk}.pdf",
+        ticket_download_filename(ticket),
         pdf_bytes,
         "application/pdf",
     )

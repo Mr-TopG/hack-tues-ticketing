@@ -253,6 +253,35 @@ class TicketEmailSendingTests(TicketFixtureMixin, TestCase):
     @patch(
         "apps.tickets.emailing.get_or_generate_ticket_pdf"
     )
+    def test_delivery_uses_custom_safe_attachment_filename(
+        self,
+        generate_pdf,
+    ):
+        self.ticket.display_name = "Alex event ticket"
+        self.ticket.save(update_fields=("display_name",))
+        generate_pdf.return_value = self.pdf_result
+
+        self.assertTrue(
+            perform_ticket_email_delivery(self.delivery.pk)
+        )
+
+        self.assertEqual(
+            mail.outbox[0].attachments[0].filename,
+            "Alex_event_ticket.pdf",
+        )
+
+        self.delivery.refresh_from_db()
+        self.assertEqual(
+            self.delivery.status,
+            TicketEmailDelivery.Status.SENT,
+        )
+        self.assertEqual(self.delivery.attempt_count, 1)
+        self.assertIsNotNone(self.delivery.sent_at)
+        self.assertEqual(self.delivery.last_error, "")
+
+    @patch(
+        "apps.tickets.emailing.get_or_generate_ticket_pdf"
+    )
     @patch("apps.tickets.emailing._build_message")
     def test_backend_failure_is_recorded_for_retry(
         self,

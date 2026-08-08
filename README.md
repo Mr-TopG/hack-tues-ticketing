@@ -140,6 +140,10 @@ Ticket holders can download an A4 PDF for a currently valid issued
 ticket. PDFs are generated lazily, include the same opaque check-in QR
 code, and are reused until a relevant ticket or event detail changes.
 
+Ticket holders can assign an optional personal name to each ticket.
+That name is safely normalized for site downloads and email attachments,
+with spaces converted to underscores and a strict length limit.
+
 Generated files use Django's `ticket_pdfs` storage alias and a separate
 persistent private-media volume. They have no public storage URL and
 are streamed only through an authenticated, owner-authorized Django
@@ -256,7 +260,7 @@ The application is designed to remain cloud-portable:
 
 ## Testing
 
-The current suite contains 202 passing tests covering:
+The current suite contains 212 passing tests covering:
 
 * unit and integration behavior;
 * authentication, email verification, and authorization;
@@ -265,6 +269,7 @@ The current suite contains 202 passing tests covering:
 * PostgreSQL concurrency and duplicate-request handling;
 * QR check-in security and concurrent scans;
 * private PDF generation, reuse, invalidation, and downloads;
+* owner-only ticket naming and safe attachment filenames;
 * background email delivery, retry, recovery, and resend behavior;
 * production proxy, deployment, and responsive UI configuration.
 
@@ -299,6 +304,7 @@ Implemented and deployed:
 * organizer approval and event create/edit/publish/cancel workflows;
 * private PDF tickets with attendee, event, venue, category, and QR
   data;
+* owner-editable ticket names and safe PDF download filenames;
 * owner-only PDF downloads and secure one-time QR check-in;
 * durable Celery ticket-email delivery with retry and recovery states;
 * responsive phone/tablet/desktop UI with persistent light/dark themes;

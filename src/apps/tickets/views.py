@@ -20,7 +20,12 @@ from .delivery import (
     TicketEmailRequestError,
     request_ticket_email,
 )
-from .forms import TicketCheckInLookupForm, TicketIssueForm
+from .filenames import ticket_download_filename
+from .forms import (
+    TicketCheckInLookupForm,
+    TicketDisplayNameForm,
+    TicketIssueForm,
+)
 from .models import Ticket, TicketRequest
 from .pdf_service import (
     TicketPdfError,
@@ -180,6 +185,38 @@ def my_tickets(request):
 
 
 @login_required
+@require_POST
+def update_ticket_name(request, ticket_id):
+    ticket = get_object_or_404(
+        Ticket,
+        pk=ticket_id,
+        user=request.user,
+    )
+    form = TicketDisplayNameForm(request.POST)
+
+    if not form.is_valid():
+        messages.error(
+            request,
+            "Ticket names must be 80 characters or fewer.",
+        )
+        return _private_no_store(
+            redirect("tickets:my_tickets")
+        )
+
+    ticket.display_name = form.cleaned_data["display_name"]
+    ticket.save(update_fields=("display_name",))
+
+    if ticket.display_name:
+        messages.success(request, "Ticket name updated.")
+    else:
+        messages.success(request, "Ticket name removed.")
+
+    return _private_no_store(
+        redirect("tickets:my_tickets")
+    )
+
+
+@login_required
 @require_http_methods(["GET", "POST"])
 def cancel_ticket(request, ticket_id):
     ticket = get_object_or_404(
@@ -280,7 +317,7 @@ def ticket_pdf(request, ticket_id):
     response = FileResponse(
         pdf_file,
         as_attachment=True,
-        filename=f"ticket-{result.ticket.pk}.pdf",
+        filename=ticket_download_filename(result.ticket),
         content_type="application/pdf",
     )
     response.headers["X-Content-Type-Options"] = "nosniff"

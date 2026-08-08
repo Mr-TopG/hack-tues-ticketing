@@ -10,7 +10,7 @@ from django.utils import timezone
 class TicketCheckInMigrationTests(TransactionTestCase):
     migrate_from = [("tickets", "0001_initial")]
     migrate_to = [("tickets", "0002_ticket_check_in_fields")]
-    migrate_latest = [("tickets", "0005_ticket_request")]
+    migrate_latest = [("tickets", "0006_ticket_display_name")]
 
     def setUp(self):
         super().setUp()

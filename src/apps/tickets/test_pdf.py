@@ -8,6 +8,10 @@ from django.urls import reverse
 
 from apps.events.models import Event
 
+from .filenames import (
+    safe_ticket_filename_stem,
+    ticket_download_filename,
+)
 from .models import Ticket
 from .pdf import (
     build_ticket_pdf_source,
@@ -331,6 +335,30 @@ class TicketPdfViewTests(TicketFixtureMixin, TestCase):
 
     @patch(
         "apps.tickets.pdf_service.render_ticket_pdf",
+        return_value=b"%PDF-1.7 custom filename",
+    )
+    def test_custom_name_is_used_as_safe_download_filename(
+        self,
+        _render,
+    ):
+        self.ticket.display_name = "Family Ticket"
+        self.ticket.save(update_fields=("display_name",))
+        self.client.force_login(self.user)
+
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn(
+            'filename="Family_Ticket.pdf"',
+            response["Content-Disposition"],
+        )
+        self.assertEqual(
+            b"".join(response.streaming_content),
+            b"%PDF-1.7 custom filename",
+        )
+
+    @patch(
+        "apps.tickets.pdf_service.render_ticket_pdf",
         return_value=b"%PDF-1.7 hidden",
     )
     def test_another_user_receives_not_found(self, render):
@@ -373,6 +401,26 @@ class TicketPdfViewTests(TicketFixtureMixin, TestCase):
 
 
 class TicketPdfRenderingTests(TicketFixtureMixin, TestCase):
+    def test_download_filename_removes_unsafe_path_and_header_data(self):
+        ticket = self.create_ticket(
+            display_name="../../ Family\r\nTicket.exe",
+        )
+
+        self.assertEqual(
+            ticket_download_filename(ticket),
+            "Family_Ticket_exe.pdf",
+        )
+
+    def test_download_filename_supports_unicode_and_has_a_hard_limit(self):
+        self.assertEqual(
+            safe_ticket_filename_stem("Семеен билет"),
+            "Семеен_билет",
+        )
+        self.assertEqual(
+            len(safe_ticket_filename_stem("x" * 10_000)),
+            80,
+        )
+
     def test_source_hash_is_deterministic_and_tracks_changes(self):
         ticket = self.create_ticket()
         source = build_ticket_pdf_source(ticket)

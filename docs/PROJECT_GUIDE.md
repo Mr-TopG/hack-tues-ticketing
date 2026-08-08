@@ -232,6 +232,11 @@ The model also stores PDF storage metadata and check-in audit fields.
 Database constraints prevent inconsistent combinations such as a
 checked-in ticket without a checker or timestamp.
 
+An owner may assign an optional 80-character display name from My
+Tickets. This is a convenience label and safe download filename; it
+does not change the event, category, ticket identity, QR token, or
+private storage path.
+
 ### `TicketEmailDelivery`
 
 Every newly issued ticket creates a delivery record in the same
@@ -403,6 +408,14 @@ view streams the file only after owner and ticket-validity checks.
 
 Cancellation and check-in clear the metadata and schedule deletion of
 the private artifact after the transaction commits.
+
+When a user assigns a ticket name, site downloads and email attachments
+use its sanitized form. Whitespace becomes underscores, path separators,
+control characters and unsafe punctuation are removed, Unicode letters
+are preserved, reserved platform filenames are prefixed, and the stem
+has a hard 80-character limit. An empty or unusable name falls back to
+`ticket-<uuid>.pdf`. The private stored object always keeps its random
+UUID-based path.
 
 Current storage location:
 

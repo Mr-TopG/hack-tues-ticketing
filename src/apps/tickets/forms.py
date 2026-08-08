@@ -7,6 +7,25 @@ class TicketIssueForm(forms.Form):
     )
 
 
+class TicketDisplayNameForm(forms.Form):
+    display_name = forms.CharField(
+        label="Ticket name",
+        max_length=80,
+        required=False,
+        widget=forms.TextInput(
+            attrs={
+                "maxlength": 80,
+                "placeholder": "For example: Alex event ticket",
+                "autocomplete": "off",
+            }
+        ),
+    )
+
+    def clean_display_name(self):
+        value = self.cleaned_data["display_name"]
+        return " ".join(value.split())
+
+
 class TicketCheckInLookupForm(forms.Form):
     validation_token = forms.RegexField(
         label="Ticket validation token",

@@ -23,6 +23,40 @@
 <div class="my-ticket-list">
     {% for ticket in tickets %}
         <article class="card my-ticket-card">
+            <form
+                class="ticket-name-form"
+                method="post"
+                action="{% url 'tickets:update_name' ticket.pk %}"
+            >
+                {% csrf_token %}
+
+                <label for="ticket-name-{{ ticket.pk }}">
+                    Ticket name
+                </label>
+
+                <div class="ticket-name-controls">
+                    <input
+                        id="ticket-name-{{ ticket.pk }}"
+                        type="text"
+                        name="display_name"
+                        value="{{ ticket.display_name }}"
+                        maxlength="80"
+                        autocomplete="off"
+                        placeholder="For example: Alex event ticket"
+                        aria-describedby="ticket-name-help-{{ ticket.pk }}"
+                    >
+
+                    <button class="button-secondary" type="submit">
+                        Save name
+                    </button>
+                </div>
+
+                <small id="ticket-name-help-{{ ticket.pk }}">
+                    Used for the downloaded PDF filename. Spaces become
+                    underscores. Leave empty to use the ticket ID.
+                </small>
+            </form>
+
             <div class="event-card-heading">
                 <div>
                     <p class="ticket-category-label">

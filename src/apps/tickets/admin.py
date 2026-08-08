@@ -10,6 +10,7 @@ class TicketAdmin(admin.ModelAdmin):
         "user",
         "event_name",
         "category",
+        "display_name",
         "status",
         "issued_at",
         "cancelled_at",
@@ -31,12 +32,14 @@ class TicketAdmin(admin.ModelAdmin):
         "user__last_name",
         "category__event__name",
         "category__name",
+        "display_name",
     )
 
     readonly_fields = (
         "id",
         "user",
         "category",
+        "display_name",
         "idempotency_key",
         "status",
         "issued_at",
