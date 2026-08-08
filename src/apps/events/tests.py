@@ -6,6 +6,9 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.accounts.models import User
+from apps.tickets.models import Ticket
+
 from .models import Event, TicketCategory
 
 
@@ -241,3 +244,36 @@ class PublicEventViewTests(TestCase):
 
         self.assertContains(response, "Open")
         self.assertContains(response, "Registration is open")
+
+    def test_availability_endpoint_returns_current_active_inventory(self):
+        holder = User.objects.create_user(
+            email="availability-holder@example.com",
+        )
+        Ticket.objects.create(
+            user=holder,
+            category=self.active_category,
+            idempotency_key="d2fa0217-f613-4540-b7f5-ae4d92a8363e",
+        )
+
+        response = self.client.get(
+            reverse(
+                "events:availability",
+                kwargs={"slug": self.published_event.slug},
+            )
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "public, no-cache, no-store")
+        payload = response.json()
+        self.assertEqual(payload["event_state"], "open")
+        self.assertEqual(
+            payload["categories"],
+            [
+                {
+                    "id": self.active_category.pk,
+                    "available": 499,
+                    "capacity": 500,
+                    "registration_state": "open",
+                }
+            ],
+        )

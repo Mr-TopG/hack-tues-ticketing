@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% load static %}
+
+{% block title %}Ticket request | Hack TUES Tickets{% endblock %}
+
+{% block content %}
+<section
+    class="card queue-status-card"
+    data-ticket-request
+    data-status-url="{% url 'tickets:request_status' ticket_request.public_id %}"
+>
+    <p class="eyebrow">Ticket queue</p>
+    <h1>{{ ticket_request.category.name }}</h1>
+    <p class="muted">{{ ticket_request.category.event.name }}</p>
+
+    <div
+        class="queue-status"
+        role="status"
+        aria-live="polite"
+        data-queue-status
+    >
+        {% if ticket_request.status == "pending" %}
+            <span class="queue-spinner" aria-hidden="true"></span>
+            <div>
+                <strong>Your request is waiting</strong>
+                <p>
+                    Queue position:
+                    <span data-queue-position>{{ queue_position }}</span>
+                </p>
+            </div>
+        {% elif ticket_request.status == "succeeded" %}
+            <div>
+                <strong>Your ticket has been issued.</strong>
+                <p>You can now download it from My tickets.</p>
+            </div>
+        {% else %}
+            <div>
+                <strong>The request could not be completed.</strong>
+                <p>{{ ticket_request.failure_message }}</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="queue-actions">
+        {% if ticket_request.status == "succeeded" %}
+            <a class="button" href="{% url 'tickets:my_tickets' %}">
+                View my tickets
+            </a>
+        {% elif ticket_request.status == "rejected" %}
+            <a class="button" href="{{ ticket_request.category.event.get_absolute_url }}">
+                Back to event
+            </a>
+        {% else %}
+            <p class="muted">
+                Keep this page open. It updates automatically.
+            </p>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_body %}
+    <script src="{% static 'js/ticket-queue.js' %}?v=20260808-queue1"></script>
+{% endblock %}

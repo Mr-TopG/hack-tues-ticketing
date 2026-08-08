@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Ticket, TicketEmailDelivery
+from .models import Ticket, TicketEmailDelivery, TicketRequest
 
 
 @admin.register(Ticket)
@@ -109,6 +109,53 @@ class TicketEmailDeliveryAdmin(admin.ModelAdmin):
     )
     ordering = ("-requested_at",)
     date_hierarchy = "requested_at"
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
+
+
+@admin.register(TicketRequest)
+class TicketRequestAdmin(admin.ModelAdmin):
+    list_display = (
+        "id",
+        "public_id",
+        "user",
+        "category",
+        "status",
+        "ticket",
+        "requested_at",
+        "completed_at",
+    )
+    list_filter = ("status", "category__event", "category")
+    search_fields = (
+        "public_id",
+        "idempotency_key",
+        "ticket__id",
+        "user__email",
+        "category__event__name",
+    )
+    readonly_fields = (
+        "id",
+        "public_id",
+        "user",
+        "category",
+        "idempotency_key",
+        "status",
+        "ticket",
+        "failure_code",
+        "failure_message",
+        "requested_at",
+        "completed_at",
+    )
+    list_select_related = (
+        "user",
+        "category__event",
+        "ticket",
+    )
+    ordering = ("id",)
 
     def has_add_permission(self, request):
         return False

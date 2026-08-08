@@ -190,6 +190,108 @@ class Ticket(models.Model):
         return self.is_valid_for_entry_at()
 
 
+class TicketRequest(models.Model):
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        SUCCEEDED = "succeeded", "Succeeded"
+        REJECTED = "rejected", "Rejected"
+
+    id = models.BigAutoField(primary_key=True)
+    public_id = models.UUIDField(
+        default=uuid4,
+        unique=True,
+        editable=False,
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name="ticket_requests",
+    )
+    category = models.ForeignKey(
+        "events.TicketCategory",
+        on_delete=models.PROTECT,
+        related_name="ticket_requests",
+    )
+    idempotency_key = models.UUIDField(
+        unique=True,
+        editable=False,
+    )
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    ticket = models.OneToOneField(
+        Ticket,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="request",
+    )
+    failure_code = models.CharField(
+        max_length=80,
+        blank=True,
+        default="",
+    )
+    failure_message = models.CharField(
+        max_length=300,
+        blank=True,
+        default="",
+    )
+    requested_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ("id",)
+        indexes = [
+            models.Index(
+                fields=("category", "status", "id"),
+                name="ticket_request_queue_idx",
+            ),
+            models.Index(
+                fields=("status", "id"),
+                name="ticket_request_status_idx",
+            ),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                condition=(
+                    Q(
+                        status="pending",
+                        ticket__isnull=True,
+                        failure_code="",
+                        failure_message="",
+                        completed_at__isnull=True,
+                    )
+                    | Q(
+                        status="succeeded",
+                        ticket__isnull=False,
+                        failure_code="",
+                        failure_message="",
+                        completed_at__isnull=False,
+                    )
+                    | (
+                        Q(
+                            status="rejected",
+                            ticket__isnull=True,
+                            completed_at__isnull=False,
+                        )
+                        & ~Q(failure_code="")
+                        & ~Q(failure_message="")
+                    )
+                ),
+                name="ticket_request_state_consistent",
+            ),
+        ]
+
+    def __str__(self):
+        return f"#{self.pk} — {self.category} — {self.status}"
+
+
 class TicketEmailDelivery(models.Model):
     class Status(models.TextChoices):
         PENDING = "pending", "Pending"

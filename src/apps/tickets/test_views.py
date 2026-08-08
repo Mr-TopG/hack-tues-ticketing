@@ -12,7 +12,8 @@ from django.utils import timezone
 from apps.accounts.models import OrganizerProfile
 from apps.events.models import Event, TicketCategory
 
-from .models import Ticket
+from .models import Ticket, TicketRequest
+from .queueing import process_next_ticket_request
 
 User = get_user_model()
 
@@ -166,24 +167,43 @@ class IssueTicketViewTests(TicketViewTestCase):
         self.assertEqual(response.status_code, 405)
         self.assertEqual(Ticket.objects.count(), 0)
 
-    def test_issue_post_creates_ticket_and_uses_prg(self):
+    @patch("apps.tickets.queueing._enqueue_task")
+    def test_issue_post_queues_ticket_and_uses_prg(self, enqueue_task):
         self.client.force_login(self.user)
         idempotency_key = uuid4()
 
-        response = self.client.post(
-            self.url,
-            {"idempotency_key": idempotency_key},
-            follow=True,
-        )
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(
+                self.url,
+                {"idempotency_key": idempotency_key},
+                follow=True,
+            )
+
+        ticket_request = TicketRequest.objects.get()
 
         self.assertEqual(
             response.redirect_chain,
-            [(reverse("tickets:my_tickets"), 302)],
+            [
+                (
+                    reverse(
+                        "tickets:request_detail",
+                        kwargs={
+                            "public_id": ticket_request.public_id,
+                        },
+                    ),
+                    302,
+                )
+            ],
         )
         self.assertContains(
             response,
-            "Your Participant ticket has been issued.",
+            "Your Participant request joined the ticket queue.",
         )
+        self.assertEqual(ticket_request.status, TicketRequest.Status.PENDING)
+        self.assertEqual(Ticket.objects.count(), 0)
+        enqueue_task.assert_called_once_with(self.category.pk)
+
+        process_next_ticket_request(self.category.pk)
 
         ticket = Ticket.objects.get()
         self.assertEqual(ticket.user, self.user)
@@ -193,6 +213,12 @@ class IssueTicketViewTests(TicketViewTestCase):
             idempotency_key,
         )
         self.assertEqual(ticket.status, Ticket.Status.ISSUED)
+        ticket_request.refresh_from_db()
+        self.assertEqual(
+            ticket_request.status,
+            TicketRequest.Status.SUCCEEDED,
+        )
+        self.assertEqual(ticket_request.ticket, ticket)
 
         self.client.get(reverse("tickets:my_tickets"))
         self.assertEqual(Ticket.objects.count(), 1)
@@ -278,6 +304,57 @@ class IssueTicketViewTests(TicketViewTestCase):
             "This ticket category is not available.",
         )
         self.assertEqual(Ticket.objects.count(), 0)
+
+    @patch("apps.tickets.queueing._enqueue_task")
+    def test_queue_status_is_private_and_reports_completion(
+        self,
+        _enqueue_task,
+    ):
+        self.client.force_login(self.user)
+        self.client.post(
+            self.url,
+            {"idempotency_key": uuid4()},
+        )
+        ticket_request = TicketRequest.objects.get()
+        status_url = reverse(
+            "tickets:request_status",
+            kwargs={"public_id": ticket_request.public_id},
+        )
+
+        pending_response = self.client.get(status_url)
+
+        self.assertEqual(pending_response.status_code, 200)
+        self.assertEqual(
+            pending_response.json()["status"],
+            TicketRequest.Status.PENDING,
+        )
+        self.assertEqual(
+            pending_response["Cache-Control"],
+            "private, no-store",
+        )
+
+        other_user = self.create_user(
+            email="other-queue-viewer@example.com",
+            verified=True,
+        )
+        self.client.force_login(other_user)
+        self.assertEqual(
+            self.client.get(status_url).status_code,
+            404,
+        )
+
+        process_next_ticket_request(self.category.pk)
+        self.client.force_login(self.user)
+        completed_response = self.client.get(status_url)
+
+        self.assertEqual(
+            completed_response.json()["status"],
+            TicketRequest.Status.SUCCEEDED,
+        )
+        self.assertEqual(
+            completed_response.json()["redirect_url"],
+            reverse("tickets:my_tickets"),
+        )
 
 
 class EventDetailTicketActionTests(TicketViewTestCase):
@@ -368,7 +445,7 @@ class EventDetailTicketActionTests(TicketViewTestCase):
             self.category.slug: "issue",
             upcoming.slug: "upcoming",
             closed.slug: "closed",
-            sold_out.slug: "sold_out",
+            sold_out.slug: "issue",
             at_limit.slug: "limit_reached",
         }
         actual_actions = {
@@ -382,6 +459,12 @@ class EventDetailTicketActionTests(TicketViewTestCase):
         self.assertContains(response, "Registration opens later")
         self.assertContains(response, "Registration closed")
         self.assertContains(response, "Sold out")
+        self.assertTrue(
+            self.category_from_response(
+                response,
+                sold_out.slug,
+            ).is_sold_out
+        )
         self.assertContains(response, "Ticket limit reached")
 
     def test_availability_and_user_count_only_include_active_tickets(self):
@@ -432,10 +515,8 @@ class EventDetailTicketActionTests(TicketViewTestCase):
         compact_html = " ".join(
             response.content.decode().split()
         )
-        self.assertIn(
-            "<strong>Available:</strong> 2 / 4",
-            compact_html,
-        )
+        self.assertIn("data-available-count", compact_html)
+        self.assertIn("> 2 </span> /", compact_html)
         self.assertIn(
             "<strong>You hold:</strong> 1",
             compact_html,

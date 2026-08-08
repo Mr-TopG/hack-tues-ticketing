@@ -2,8 +2,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.files.storage import storages
-from django.http import FileResponse, Http404, HttpResponse
+from django.http import FileResponse, Http404, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.http import (
     require_http_methods,
@@ -20,11 +21,15 @@ from .delivery import (
     request_ticket_email,
 )
 from .forms import TicketCheckInLookupForm, TicketIssueForm
-from .models import Ticket
+from .models import Ticket, TicketRequest
 from .pdf_service import (
     TicketPdfError,
     TicketPdfUnavailableError,
     get_or_generate_ticket_pdf,
+)
+from .queueing import (
+    enqueue_ticket_request,
+    ticket_request_queue_position,
 )
 from .qr import render_qr_svg, ticket_check_in_url
 from .services import (
@@ -32,17 +37,10 @@ from .services import (
     TicketCheckInError,
     TicketNotFoundError,
     TicketServiceError,
+    cancel_ticket as cancel_ticket_service,
+    check_in_ticket as check_in_ticket_service,
     get_ticket_for_check_in,
     user_can_access_ticket_check_in,
-)
-from .services import (
-    cancel_ticket as cancel_ticket_service,
-)
-from .services import (
-    check_in_ticket as check_in_ticket_service,
-)
-from .services import (
-    issue_ticket as issue_ticket_service,
 )
 
 
@@ -73,7 +71,7 @@ def issue_ticket(request, category_id):
         return redirect(event_url)
 
     try:
-        result = issue_ticket_service(
+        result = enqueue_ticket_request(
             user=request.user,
             category_id=category.pk,
             idempotency_key=form.cleaned_data["idempotency_key"],
@@ -84,19 +82,79 @@ def issue_ticket(request, category_id):
         messages.error(request, str(error))
         return redirect(event_url)
 
+    ticket_request = result.ticket_request
+
     if result.created:
-        messages.success(
+        messages.info(
             request,
-            f"Your {category.name} ticket has been issued.",
+            f"Your {category.name} request joined the ticket queue.",
         )
     else:
         messages.info(
             request,
-            "This request was already processed. "
+            "This request was already submitted. "
             "No duplicate ticket was created.",
         )
 
-    return redirect("tickets:my_tickets")
+    return redirect(
+        "tickets:request_detail",
+        public_id=ticket_request.public_id,
+    )
+
+
+@login_required
+@require_safe
+def ticket_request_detail(request, public_id):
+    ticket_request = get_object_or_404(
+        TicketRequest.objects.select_related(
+            "category__event",
+            "ticket",
+        ),
+        public_id=public_id,
+        user=request.user,
+    )
+
+    return _private_no_store(
+        render(
+            request,
+            "tickets/request_status.html",
+            {
+                "ticket_request": ticket_request,
+                "queue_position": ticket_request_queue_position(
+                    ticket_request
+                ),
+            },
+        )
+    )
+
+
+@login_required
+@require_safe
+def ticket_request_status(request, public_id):
+    ticket_request = get_object_or_404(
+        TicketRequest.objects.select_related("category__event"),
+        public_id=public_id,
+        user=request.user,
+    )
+    data = {
+        "status": ticket_request.status,
+        "queue_position": ticket_request_queue_position(
+            ticket_request
+        ),
+        "message": "",
+        "redirect_url": "",
+    }
+
+    if ticket_request.status == TicketRequest.Status.SUCCEEDED:
+        data["message"] = "Your ticket has been issued."
+        data["redirect_url"] = reverse("tickets:my_tickets")
+    elif ticket_request.status == TicketRequest.Status.REJECTED:
+        data["message"] = ticket_request.failure_message
+        data["redirect_url"] = (
+            ticket_request.category.event.get_absolute_url()
+        )
+
+    return _private_no_store(JsonResponse(data))
 
 
 @login_required

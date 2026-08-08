@@ -229,6 +229,13 @@ CELERY_TASK_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ("json",)
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
+    "dispatch-pending-ticket-requests": {
+        "task": (
+            "apps.tickets.tasks."
+            "dispatch_pending_ticket_requests"
+        ),
+        "schedule": 5.0,
+    },
     "dispatch-pending-ticket-emails": {
         "task": (
             "apps.tickets.tasks."

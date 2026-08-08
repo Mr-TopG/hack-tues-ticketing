@@ -1696,3 +1696,52 @@ span.flatpickr-weekday,
         transition-duration: 0.01ms !important;
     }
 }
+
+.queue-status-card {
+    width: min(620px, 100%);
+    margin-inline: auto;
+}
+
+.queue-status {
+    display: flex;
+    min-height: 110px;
+    padding: 22px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    margin-block: 24px;
+    align-items: center;
+    gap: 18px;
+    background: var(--surface-subtle);
+}
+
+.queue-status p {
+    margin: 6px 0 0;
+}
+
+.queue-spinner {
+    width: 30px;
+    height: 30px;
+    border: 3px solid var(--line-strong);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    flex: 0 0 auto;
+    animation: queue-spin 0.85s linear infinite;
+}
+
+.queue-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+@keyframes queue-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .queue-spinner {
+        animation: none;
+    }
+}

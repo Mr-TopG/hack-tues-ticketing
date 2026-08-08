@@ -13,6 +13,11 @@ urlpatterns = [
         name="list",
     ),
     path(
+        "<slug:slug>/availability/",
+        views.event_availability,
+        name="availability",
+    ),
+    path(
         "<slug:slug>/",
         views.event_detail,
         name="detail",

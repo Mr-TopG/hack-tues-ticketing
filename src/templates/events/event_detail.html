@@ -1,5 +1,7 @@
 {% extends "base.html" %}
 
+{% load static %}
+
 {% block title %}{{ event.name }} | Hack TUES Tickets{% endblock %}
 
 {% block content %}
@@ -75,9 +77,16 @@
         </p>
     {% endif %}
 
-    <div class="ticket-category-list">
+    <div
+        class="ticket-category-list"
+        data-live-availability
+        data-availability-url="{% url 'events:availability' event.slug %}"
+    >
         {% for category in event.public_ticket_categories %}
-            <article class="ticket-category">
+            <article
+                class="ticket-category"
+                data-category-id="{{ category.pk }}"
+            >
                 <div>
                     <div class="ticket-category-heading">
                         <h3>{{ category.name }}</h3>
@@ -87,6 +96,7 @@
                                 status-badge
                                 status-{{ category.display_registration_state }}
                             "
+                            data-registration-badge
                         >
                             {{ category.display_registration_state|title }}
                         </span>
@@ -101,9 +111,13 @@
                     <div class="ticket-facts">
                         <span>
                             <strong>Available:</strong>
-                            {{ category.remaining_capacity }}
+                            <span data-available-count>
+                                {{ category.remaining_capacity }}
+                            </span>
                             /
-                            {{ category.capacity }}
+                            <span data-capacity-count>
+                                {{ category.capacity }}
+                            </span>
                         </span>
 
                         <span>
@@ -125,7 +139,11 @@
                     </div>
                 </div>
 
-                <div class="ticket-action">
+                <div
+                    class="ticket-action"
+                    data-available-action
+                    {% if category.is_sold_out %}hidden{% endif %}
+                >
                     {% if category.ticket_action == "issue" %}
                         <form
                             method="post"
@@ -156,10 +174,6 @@
                         <span class="ticket-action-note">
                             Registration opens later
                         </span>
-                    {% elif category.ticket_action == "sold_out" %}
-                        <span class="ticket-action-note">
-                            Sold out
-                        </span>
                     {% elif category.ticket_action == "limit_reached" %}
                         <span class="ticket-action-note">
                             Ticket limit reached
@@ -177,6 +191,27 @@
                         </span>
                     {% endif %}
                 </div>
+
+                <div
+                    class="ticket-action"
+                    data-sold-out-action
+                    {% if not category.is_sold_out %}hidden{% endif %}
+                >
+                    <span class="ticket-action-note">Sold out</span>
+                </div>
+
+                <div
+                    class="ticket-action"
+                    data-registration-unavailable-action
+                    hidden
+                >
+                    <span
+                        class="ticket-action-note"
+                        data-registration-unavailable-note
+                    >
+                        Registration closed
+                    </span>
+                </div>
             </article>
         {% empty %}
             <article class="ticket-category">
@@ -187,4 +222,8 @@
         {% endfor %}
     </div>
 </section>
+{% endblock %}
+
+{% block extra_body %}
+    <script src="{% static 'js/live-availability.js' %}?v=20260808-live1"></script>
 {% endblock %}

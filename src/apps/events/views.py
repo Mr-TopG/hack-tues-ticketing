@@ -12,12 +12,16 @@ from django.db.models import (
     Value,
 )
 from django.db.models.deletion import ProtectedError
-from django.utils import timezone
-from django.views.decorators.http import require_http_methods
+from django.http import JsonResponse
 from django.shortcuts import (
     get_object_or_404,
     redirect,
     render,
+)
+from django.utils import timezone
+from django.views.decorators.http import (
+    require_http_methods,
+    require_safe,
 )
 
 from apps.accounts.models import OrganizerProfile
@@ -126,13 +130,12 @@ def event_detail(request, slug):
             0,
         )
         category.issue_form = None
+        category.is_sold_out = category.remaining_capacity == 0
 
         if category.display_registration_state == "upcoming":
             category.ticket_action = "upcoming"
         elif category.display_registration_state != "open":
             category.ticket_action = "closed"
-        elif category.remaining_capacity == 0:
-            category.ticket_action = "sold_out"
         elif not request.user.is_authenticated:
             category.ticket_action = "login"
         elif not email_verified:
@@ -159,6 +162,54 @@ def event_detail(request, slug):
             "email_verified": email_verified,
         },
     )
+
+
+@require_safe
+def event_availability(request, slug):
+    event = get_object_or_404(
+        Event,
+        slug=slug,
+        status__in=PUBLIC_EVENT_STATUSES,
+    )
+    request_time = timezone.now()
+    categories = (
+        TicketCategory.objects.filter(
+            event=event,
+            is_active=True,
+        )
+        .annotate(
+            active_ticket_count=Count(
+                "tickets",
+                filter=Q(
+                    tickets__status__in=Ticket.ACTIVE_STATUSES,
+                ),
+            )
+        )
+        .order_by("sort_order", "name")
+    )
+    response = JsonResponse(
+        {
+            "event_state": event.registration_state_at(request_time),
+            "generated_at": request_time.isoformat(),
+            "categories": [
+                {
+                    "id": category.pk,
+                    "available": max(
+                        category.capacity
+                        - category.active_ticket_count,
+                        0,
+                    ),
+                    "capacity": category.capacity,
+                    "registration_state": (
+                        category.registration_state_at(request_time)
+                    ),
+                }
+                for category in categories
+            ],
+        }
+    )
+    response.headers["Cache-Control"] = "public, no-cache, no-store"
+    return response
 
 
 def approved_organizer_required(view_function):

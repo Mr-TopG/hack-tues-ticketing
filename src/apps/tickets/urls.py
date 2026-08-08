@@ -17,6 +17,16 @@ urlpatterns = [
         name="my_tickets",
     ),
     path(
+        "account/ticket-requests/<uuid:public_id>/",
+        views.ticket_request_detail,
+        name="request_detail",
+    ),
+    path(
+        "account/ticket-requests/<uuid:public_id>/status/",
+        views.ticket_request_status,
+        name="request_status",
+    ),
+    path(
         "account/tickets/<uuid:ticket_id>/cancel/",
         views.cancel_ticket,
         name="cancel",
