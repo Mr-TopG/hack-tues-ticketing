@@ -4,6 +4,10 @@ A modern, concurrent ticket-sales platform developed as an application task for 
 
 The system is designed to handle hundreds of simultaneous purchase attempts while maintaining fair ticket allocation and preventing overselling.
 
+For a complete explanation of the architecture, data model, request
+flows, security, deployment, operations, testing, and extension points,
+read the [Project Guide](docs/PROJECT_GUIDE.md).
+
 ## Project goals
 
 * Landing page with event information
@@ -70,12 +74,12 @@ categories, issued tickets, and delivery state.
 Redis is used for:
 
 * Celery task messaging
-* temporary coordination
 
 Redis is not the authoritative source of ticket availability.
 
 Celery workers handle background operations such as:
 
+* processing durable ticket requests in category order
 * generating or reusing PDF tickets for email delivery
 * sending ticket emails
 * retrying failed deliveries
@@ -84,6 +88,8 @@ Celery workers handle background operations such as:
 
 Free ticket registration is implemented with:
 
+* a durable PostgreSQL purchase-request queue;
+* a monotonic per-category ordering point before background work;
 * PostgreSQL transactions and category-row locking;
 * database-backed idempotency keys for safe retries;
 * per-category capacity and per-user limits;
@@ -94,10 +100,23 @@ Free ticket registration is implemented with:
 PostgreSQL is the authoritative inventory source. Redis is not used as a
 ticket counter.
 
-Ticket allocation is serialized per category, which prevents
-overselling under concurrent requests. Strict request-arrival FIFO
-ordering is not implemented yet; adding a durable purchase-request
-queue remains planned work.
+Ticket requests are committed before the browser receives its queue
+page. A short category lock serializes accepted submissions, and each
+request receives a monotonic database sequence. Celery workers always
+process the oldest pending sequence for a category while holding the
+same category lock used by allocation. This provides a durable
+first-committed-first-served order and prevents overselling.
+
+Celery Beat scans for pending requests every five seconds. A request
+therefore remains recoverable if task publication fails, Redis
+restarts, or a worker exits. The private queue page reports its current
+position and updates automatically until the request succeeds or is
+rejected.
+
+Public event pages fetch an authoritative PostgreSQL availability
+snapshot every two seconds and update category counts and sold-out
+actions without reloading the page. Polling backs off during temporary
+errors and while the browser tab is hidden.
 
 ## Ticket validation and check-in
 
@@ -126,6 +145,11 @@ persistent private-media volume. They have no public storage URL and
 are streamed only through an authenticated, owner-authorized Django
 view. Cancelling or checking in a ticket clears its PDF metadata and
 deletes the stored artifact after the database transaction commits.
+
+The VM disk is intentionally the primary PDF store for this project.
+The `private_media_data` Docker volume must be included in the VM's
+external backup script together with PostgreSQL backups. A consistent
+restore needs both the database metadata and the private PDF files.
 
 ## Email delivery
 
@@ -232,7 +256,7 @@ The application is designed to remain cloud-portable:
 
 ## Testing
 
-The current suite contains 196 passing tests covering:
+The current suite contains 202 passing tests covering:
 
 * unit and integration behavior;
 * authentication, email verification, and authorization;
@@ -246,7 +270,8 @@ The current suite contains 196 passing tests covering:
 
 A separate high-volume load test with hundreds of simulated clients is
 still planned. The existing concurrency tests prove that capacity is
-not oversold, but are not a substitute for performance testing.
+not oversold, and queue tests prove ordered processing for committed
+requests, but they are not a substitute for performance testing.
 
 ## Security
 
@@ -268,7 +293,9 @@ Implemented and deployed:
 
 * multi-event public platform with event and ticket-category pages;
 * mandatory verified-email eligibility for ticket issuance;
-* atomic, idempotent ticket registration without overselling;
+* durable FIFO ticket requests with atomic, idempotent allocation and
+  no overselling;
+* live availability counts and sold-out states without page reloads;
 * organizer approval and event create/edit/publish/cancel workflows;
 * private PDF tickets with attendee, event, venue, category, and QR
   data;
@@ -282,13 +309,9 @@ Implemented and deployed:
 
 Remaining assignment work:
 
-* configure and verify a real production SMTP provider;
-* move private PDF artifacts from the persistent local Docker volume to
-  S3-compatible cloud storage;
-* push availability updates to open pages without a refresh using
-  WebSockets or server-sent events;
-* add strict FIFO purchase-request processing and high-volume load
-  tests;
+* exercise the queue with a dedicated high-volume load test;
+* operate and regularly verify off-VM backups for PostgreSQL and the
+  private PDF volume;
 * optionally add seat selection and payments.
 
 The public source repository is

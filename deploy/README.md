@@ -132,6 +132,20 @@ The web startup script runs `collectstatic` before Gunicorn starts.
 Nginx serves `/static/` from the shared read-only static volume and
 proxies all application requests to Gunicorn.
 
+## Private PDF backups
+
+Generated ticket PDFs live at `/app/private-media` inside the web and
+worker containers. Docker persists that directory in the
+`private_media_data` named volume; it is not public media and must not
+be served directly by Nginx.
+
+Back up this volume to another server with the operator-managed backup
+script. Back up PostgreSQL in the same backup cycle because ticket rows
+contain the private storage names and generation hashes. Test restores
+regularly, preserve file permissions, and restore the database and PDF
+volume from matching recovery points. The application does not treat
+the backup destination as live storage.
+
 For a Cloudflare Tunnel installed on the same VM, create a published
 application route whose public hostname is the configured
 `APP_BASE_URL` hostname and whose service is
