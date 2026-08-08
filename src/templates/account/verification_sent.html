@@ -15,8 +15,16 @@
     </p>
 
     <p class="muted">
-        During development, the message is printed in the
-        Docker web-service logs.
+        Delivery can take a few minutes. If you do not see the
+        message, check your spam or junk folder and make sure you
+        entered the correct email address.
     </p>
+
+    <div class="auth-links">
+        <p class="muted">
+            Already verified?
+            <a href="{% url 'account_login' %}">Log in</a>
+        </p>
+    </div>
 </section>
 {% endblock %}
